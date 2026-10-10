@@ -1,0 +1,661 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#070A17">
+
+    <title>Admin Overview · UniGate</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap"
+          rel="stylesheet">
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/styles.css') }}">
+
+    <style>
+        .create-event-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-y: auto;
+            background: rgba(3, 5, 18, 0.82);
+            backdrop-filter: blur(6px);
+        }
+
+        .create-event-backdrop[hidden] {
+            display: none;
+        }
+
+        .create-event-modal {
+            box-sizing: border-box;
+            width: 100%;
+            max-width: 620px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 26px;
+            border: 1px solid #303766;
+            border-radius: 18px;
+            background: #10142f;
+            color: #e9ecff;
+            box-shadow: 0 20px 70px rgba(0, 0, 0, 0.5);
+        }
+
+        .create-event-modal-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .create-event-modal-header h2 {
+            margin: 0 0 6px;
+        }
+
+        .create-event-modal-header p {
+            margin: 0;
+        }
+
+        .create-event-close {
+            border: 0;
+            background: transparent;
+            color: #e9ecff;
+            font-size: 28px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .create-event-form {
+            display: grid;
+            gap: 15px;
+        }
+
+        .create-event-form label {
+            display: block;
+            margin-bottom: 7px;
+            color: #c7ccec;
+            font-size: 0.9rem;
+        }
+
+        .create-event-form input,
+        .create-event-form textarea {
+            box-sizing: border-box;
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #303766;
+            border-radius: 9px;
+            background: #090c20;
+            color: #f1f3ff;
+            font: inherit;
+        }
+
+        .create-event-form input:focus,
+        .create-event-form textarea:focus {
+            outline: 2px solid #7957ff;
+            outline-offset: 1px;
+        }
+
+        .create-event-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .create-event-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .create-event-cancel {
+            padding: 11px 18px;
+            border: 1px solid #303766;
+            border-radius: 9px;
+            background: transparent;
+            color: #e9ecff;
+            cursor: pointer;
+        }
+
+        @media (max-width: 520px) {
+            .create-event-row {
+                grid-template-columns: 1fr;
+            }
+
+            .create-event-modal {
+                padding: 18px;
+            }
+        }
+    </style>
+</head>
+
+<body data-page="admin">
+
+<div class="adm view">
+
+    <!-- Sidebar -->
+    <aside class="side">
+
+        <a class="brand"
+           href="{{ url_for('events.home') }}"
+           aria-label="UniGate home"
+           style="padding:6px 10px 18px">
+
+            <span class="logo">
+                <span data-icon="logo" data-size="30"></span>
+                UniGate
+            </span>
+        </a>
+
+        <a class="nv"
+           href="{{ url_for('admin.dashboard') }}"
+           aria-current="page">
+
+            <span data-icon="grid" data-size="20"></span>
+            Overview
+        </a>
+
+        <a class="nv" href="{{ url_for('events.home') }}">
+            <span data-icon="cal" data-size="20"></span>
+            Events
+        </a>
+
+
+        <a class="nv" href="{{ url_for('admin.registrations_page') }}">
+            <span data-icon="users" data-size="20"></span>
+            Registrations
+        </a>
+
+
+        <button class="nv" type="button" disabled>
+            <span data-icon="scan" data-size="20"></span>
+            Check-in
+        </button>
+
+        <a class="nv" href="{{ url_for('admin.volunteers') }}">
+            <span data-icon="shield" data-size="20"></span>
+            Volunteers
+        </a>
+        <div class="who">
+
+            <a class="avatar"
+               href="{{ url_for('auth.logout') }}"
+               title="Sign out"
+               aria-label="Sign out">
+                {{ current_user.name[0]|upper if current_user and current_user.name else 'AD' }}
+            </a>
+
+            <div>
+                <b>{{ current_user.name if current_user else 'Admin' }}</b>
+                <small>Events office</small>
+            </div>
+
+        </div>
+
+    </aside>
+
+    <!-- Main dashboard -->
+    <main class="am">
+
+        <!-- Header -->
+        <div class="ah">
+
+            <div>
+                <h1 style="font-size:clamp(1.6rem,3vw,2.3rem)">
+                    Overview
+                </h1>
+
+                <p class="sub">
+                    Manage your events and monitor your event portal.
+                </p>
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+
+                <button class="btn ghost"
+                        type="button"
+                        id="export-csv-btn">
+                    <span data-icon="down" data-size="18"></span>
+                    Export CSV
+                </button>
+
+                <button class="btn primary"
+                        type="button"
+                        id="create-event-btn">
+                    <span data-icon="plus" data-size="18"></span>
+                    Create event
+                </button>
+
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <section class="stats">
+
+            <div class="card stat ring-stat">
+
+                <svg class="ring" viewBox="0 0 100 100" aria-hidden="true">
+                    <circle class="t"
+                            cx="50" cy="50" r="44"
+                            fill="none" stroke-width="10"/>
+
+                    <circle class="p"
+                            cx="50" cy="50" r="44"
+                            fill="none" stroke-width="10"
+                            stroke-dasharray="276.5"
+                            stroke-dashoffset="276.5"/>
+                </svg>
+
+                <div>
+                    <div class="k">Checked in today</div>
+                    <div class="v">—</div>
+                    <small>Check-in tracking not connected</small>
+                </div>
+
+            </div>
+
+            <div class="card stat">
+                <div class="k">Registrations</div>
+                <div class="v">—</div>
+                <small>Registration feature not connected</small>
+            </div>
+
+            <div class="card stat">
+                <div class="k">Total event capacity</div>
+
+                <div class="v">
+                    {% set capacity = namespace(total=0) %}
+                    {% for event in events %}
+                        {% set capacity.total = capacity.total + (event.capacity or 0) %}
+                    {% endfor %}
+                    {{ capacity.total }}
+                </div>
+
+                <small>Combined capacity of database events</small>
+            </div>
+
+            <div class="card stat">
+                <div class="k">Total events</div>
+                <div class="v">{{ events|length }}</div>
+                <small>Events stored in the database</small>
+            </div>
+
+        </section>
+
+        <!-- Registration chart and scanner -->
+        <section class="mg">
+
+            <div class="card panel">
+
+                <h3>
+                    Registration activity
+                    <span class="pill info">No data yet</span>
+                </h3>
+
+                <div class="empty-state">
+                    <p>
+                        Registration analytics will appear here when the
+                        registration feature is connected to the database.
+                    </p>
+                </div>
+
+            </div>
+
+            <div class="card panel">
+
+                <h3>
+                    Gate scanner
+                    <span class="pill">Not connected</span>
+                </h3>
+
+                <div class="scanner">
+                    <div class="f">
+                        <i></i><i></i><i></i><i></i>
+                    </div>
+                    <p>QR scanner is not connected yet.</p>
+                </div>
+
+                <div class="result">
+                    <span data-icon="scan" data-size="22"></span>
+
+                    <div>
+                        <b>Waiting for scanner integration</b>
+                        <div class="muted" style="font-size:.88rem">
+                            No ticket has been scanned.
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- Events table and activity panels -->
+        <section class="mg">
+
+            <!-- Database events -->
+            <div class="card panel">
+
+                <h3>
+                    Events
+                    <span class="pill info">{{ events|length }} total</span>
+                </h3>
+
+                <div class="tw">
+                    <table>
+
+                        <thead>
+                            <tr>
+                                <th>Event</th>
+                                <th>Date</th>
+                                <th>Registered</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for event in events %}
+                            <tr>
+
+                                <td>
+                                    <b>{{ event.title }}</b>
+                                    <div class="muted" style="font-size:.85rem">
+                                        {{ event.venue }}
+                                    </div>
+                                </td>
+
+                                <td>
+                                    {{ event.event_date.strftime('%d %b %Y')
+                                       if event.event_date else '—' }}
+                                </td>
+
+                                <td>
+                                    <div class="bar">
+                                        <i style="width:0%"></i>
+                                    </div>
+                                    <small class="muted">
+                                        Registration data unavailable
+                                    </small>
+                                </td>
+
+                                <td>
+                                    <span class="pill info">Created</span>
+                                </td>
+
+                                <td>
+                                    <form
+                                        action="{{ url_for('admin.delete_event', event_id=event.id) }}"
+                                        method="POST"
+                                        onsubmit="return confirm('Are you sure you want to delete this event?');">
+
+                                        <button class="btn ghost sm" type="submit">
+                                            Delete
+                                        </button>
+
+                                    </form>
+                                </td>
+
+                            </tr>
+
+                            {% else %}
+                            <tr>
+                                <td colspan="5">
+                                    <div class="empty-state">
+                                        <p>No events have been created yet.</p>
+                                        <small class="muted">
+                                            Create an event to see it listed here.
+                                        </small>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+
+                    </table>
+                </div>
+
+            </div>
+
+            <!-- Recent check-ins and volunteers -->
+            <div style="display:grid;gap:16px;align-content:start">
+
+                <div class="card panel">
+
+                    <h3>Recent check-ins</h3>
+
+                    <ul class="feed" id="feed">
+                        <li>
+
+                            <span class="av">
+                                <span data-icon="scan" data-size="20"></span>
+                            </span>
+
+                            <span class="nm">
+                                <b>No check-ins yet</b>
+                                <small>Check-in records are not connected.</small>
+                            </span>
+
+                        </li>
+                    </ul>
+
+                </div>
+
+                <div class="card panel">
+
+                    <h3>Volunteers on duty</h3>
+
+                    <div class="vol">
+                        <span>
+                            <b>No volunteer assignments</b>
+
+                            <div class="muted" style="font-size:.85rem">
+                                Volunteer assignments will appear here when
+                                volunteer management is connected.
+                            </div>
+                        </span>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- UniGate branding -->
+        <p class="muted" style="font-size:.85rem;margin-top:24px">
+            UniGate Admin Dashboard
+        </p>
+
+    </main>
+
+</div>
+
+<!-- Create Event Modal -->
+<div class="create-event-backdrop" id="create-event-modal" hidden>
+
+    <section class="create-event-modal"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="create-event-heading">
+
+        <div class="create-event-modal-header">
+
+            <div>
+                <h2 id="create-event-heading">Create new event</h2>
+                <p class="muted">Enter the details for your college event.</p>
+            </div>
+
+            <button type="button"
+                    class="create-event-close"
+                    id="close-create-event"
+                    aria-label="Close form">
+                &times;
+            </button>
+
+        </div>
+
+        <form class="create-event-form"
+              action="{{ url_for('admin.create_event') }}"
+              method="POST">
+
+            <div>
+                <label for="new-event-title">Event title *</label>
+                <input id="new-event-title"
+                       name="title"
+                       type="text"
+                       placeholder="e.g. Tech Fest 2026"
+                       required>
+            </div>
+
+            <div>
+                <label for="new-event-description">Description *</label>
+                <textarea id="new-event-description"
+                          name="description"
+                          rows="3"
+                          placeholder="Describe your event"
+                          required></textarea>
+            </div>
+
+            <div>
+                <label for="new-event-venue">Venue *</label>
+                <input id="new-event-venue"
+                       name="venue"
+                       type="text"
+                       placeholder="e.g. Main Auditorium"
+                       required>
+            </div>
+
+            <div class="create-event-row">
+
+                <div>
+                    <label for="new-event-date">Event date *</label>
+                    <input id="new-event-date"
+                           name="event_date"
+                           type="date"
+                           required>
+                </div>
+
+                <div>
+                    <label for="new-event-time">Start time *</label>
+                    <input id="new-event-time"
+                           name="start_time"
+                           type="time"
+                           required>
+                </div>
+
+            </div>
+
+            <div>
+                <label for="new-event-capacity">Capacity *</label>
+                <input id="new-event-capacity"
+                       name="capacity"
+                       type="number"
+                       min="1"
+                       placeholder="e.g. 200"
+                       required>
+            </div>
+
+            <div>
+                <label for="new-event-branches">Allowed branches (optional)</label>
+                <input id="new-event-branches"
+                       name="allowed_branches"
+                       type="text"
+                       placeholder="e.g. CSE, CSIT, IT">
+            </div>
+
+            <div>
+                <label for="new-event-years">Allowed years (optional)</label>
+                <input id="new-event-years"
+                       name="allowed_years"
+                       type="text"
+                       placeholder="e.g. 3, 4">
+            </div>
+
+            <div class="create-event-actions">
+
+                <button type="button"
+                        class="create-event-cancel"
+                        id="cancel-create-event">
+                    Cancel
+                </button>
+
+                <button type="submit" class="btn primary">
+                    Create event
+                </button>
+
+            </div>
+
+        </form>
+
+    </section>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+<script>
+(function () {
+
+    const openButton = document.getElementById("create-event-btn");
+    const modal = document.getElementById("create-event-modal");
+    const closeButton = document.getElementById("close-create-event");
+    const cancelButton = document.getElementById("cancel-create-event");
+    const titleInput = document.getElementById("new-event-title");
+
+    if (!openButton || !modal) {
+        console.error("Create Event button or modal was not found.");
+        return;
+    }
+
+    function openModal() {
+        modal.hidden = false;
+        document.body.style.overflow = "hidden";
+
+        if (titleInput) {
+            titleInput.focus();
+        }
+    }
+
+    function closeModal() {
+        modal.hidden = true;
+        document.body.style.overflow = "";
+        openButton.focus();
+    }
+
+    openButton.addEventListener("click", openModal);
+
+    if (closeButton) {
+        closeButton.addEventListener("click", closeModal);
+    }
+
+    if (cancelButton) {
+        cancelButton.addEventListener("click", closeModal);
+    }
+
+    modal.addEventListener("click", function (event) {
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && !modal.hidden) {
+            closeModal();
+        }
+    });
+
+})();
+</script>
+
+</body>
+</html>

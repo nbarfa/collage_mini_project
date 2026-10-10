@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#070A17">
+
+    <title>Your Profile · UniGate</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+
+<body data-page="profile">
+
+    <!-- Header -->
+    <header class="top">
+        <a class="brand" href="{{ url_for('events.home') }}" aria-label="UniGate home">
+
+            <span class="logo">
+                <span data-icon="logo" data-size="30"></span>
+                UniGate
+            </span>
+        </a>
+
+        <nav aria-label="Main">
+            <a href="{{ url_for('events.home') }}">Events</a>
+        </nav>
+
+        <a class="avatar" href="{{ url_for('events.profile') }}" title="Your profile" aria-label="Your profile"
+            aria-current="page">
+            {{ (current_user.name or 'U')[:2]|upper }}
+        </a>
+    </header>
+
+    <div class="wrap page view">
+
+        <!-- Profile identity -->
+        <section class="card pf-head">
+
+            <div class="pf-av" id="pf-initials" aria-hidden="true">
+                {{ (current_user.name or 'U')[:2]|upper }}
+            </div>
+
+            <div class="pf-id">
+                <h1 id="pf-title">
+                    {{ current_user.name or 'User' }}
+                </h1>
+
+                <p class="muted">{{ current_user.email }}</p>
+
+                <div class="chips">
+                    <span class="pill info">
+                        {{ (current_user.role or 'student')|title }}
+                    </span>
+
+                    <span class="pill">
+                        {{ current_user.branch or 'Branch not provided' }}
+                        {% if current_user.year %}
+                        , {{ current_user.year }}
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <a class="btn ghost" href="{{ url_for('auth.logout') }}">
+                Sign out
+            </a>
+
+        </section>
+
+        <!-- Activity statistics -->
+        <section class="pf-stats" aria-label="Your activity">
+
+            <div class="card stat">
+                <div class="k">Events registered</div>
+                <div class="v">{{ registrations|length }}</div>
+                <small>Total event registrations</small>
+            </div>
+
+            <div class="card stat">
+                <div class="k">Events attended</div>
+                <div class="v">—</div>
+                <small>Check-in data not available yet</small>
+            </div>
+
+            <div class="card stat">
+                <div class="k">Upcoming</div>
+                <div class="v">
+                    {{ registrations
+                    |selectattr('event_date', 'ge', today)
+                    |list
+                    |length }}
+                </div>
+                <small>Registered events scheduled for today or later</small>
+            </div>
+
+        </section>
+
+        <div class="pf-grid">
+
+            <!-- Left column -->
+            <div class="pf-col">
+                <!-- Personal details -->
+                <section class="card pf-card">
+
+                    <div class="row2" style="align-items: center; justify-content: space-between;">
+                        <div>
+                            <h2>Personal details</h2>
+                            <p class="sub">
+                                View and manage your account information.
+                            </p>
+                        </div>
+
+                        <button class="btn ghost sm" type="button" id="edit-profile-btn">
+                            Edit Details
+                        </button>
+                    </div>
+
+                    <form class="form" id="profile-form">
+
+                        <!-- Full name -->
+                        <div class="field">
+                            <label for="pf-name">Full name</label>
+                            <input class="inp" id="pf-name" name="name" type="text"
+                                value="{{ current_user.name or '' }}" autocomplete="name" maxlength="100" required
+                                readonly>
+                        </div>
+
+                        <!-- College email: read-only -->
+                        <div class="field">
+                            <label for="pf-email">College email</label>
+                            <input class="inp" id="pf-email" name="email" type="email"
+                                value="{{ current_user.email or '' }}" autocomplete="email" readonly>
+                        </div>
+
+                        <!-- Account role: read-only -->
+                        <div class="field">
+                            <label for="pf-role">Account role</label>
+                            <input class="inp" id="pf-role" type="text"
+                                value="{{ (current_user.role or 'student')|title }}" readonly>
+                        </div>
+
+                        <!-- Enrollment number -->
+                        <div class="field">
+                            <label for="pf-enrollment">Enrollment number</label>
+                            <input class="inp" id="pf-enrollment" name="enrollment_number" type="text"
+                                value="{{ current_user.enrollment_number or '' }}"
+                                placeholder="Enter your enrollment number" maxlength="50" readonly>
+                        </div>
+
+                        <!-- Branch and year -->
+                        <div class="row2">
+
+                            <div class="field">
+                                <label for="pf-branch">Branch</label>
+                                <input class="inp" id="pf-branch" name="branch" type="text"
+                                    value="{{ current_user.branch or '' }}" placeholder="Enter your branch"
+                                    maxlength="50" required readonly>
+                            </div>
+
+                            <div class="field">
+                                <label for="pf-year">Year</label>
+                                <input class="inp" id="pf-year" name="year" type="number" min="1" max="5"
+                                    value="{{ current_user.year or '' }}" placeholder="Enter year" required readonly>
+                            </div>
+
+                        </div>
+
+                        <!-- Status message -->
+                        <p class="hint" id="profile-message" role="status" aria-live="polite">
+                            Your account details are read-only. Click Edit Details to make changes.
+                        </p>
+
+                        <!-- These buttons appear only in edit mode -->
+                        <div class="acts" id="profile-actions" hidden>
+
+                            <button class="btn ghost sm" type="button" id="cancel-profile-btn">
+                                Cancel
+                            </button>
+
+                            <button class="btn sm" type="submit" id="save-profile-btn">
+                                Save Details
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </section>
+
+
+                <!-- Change password -->
+                <section class="card pf-card">
+
+                    <h2>Change password</h2>
+
+                    <p class="sub">
+                        Password changes are not enabled on this page yet.
+                    </p>
+
+                    <p class="hint">
+                        A secure password-update backend route is required
+                        before this feature can be activated.
+                    </p>
+
+                </section>
+
+            </div>
+
+            <!-- Right column -->
+            <div class="pf-col">
+
+                <!-- My tickets -->
+                <section class="card pf-card" id="my-tickets">
+
+                    <h2>My tickets</h2>
+
+                    <p class="sub">
+                        Your registered events.
+                    </p>
+
+                    {% if registrations %}
+
+                    <div class="my-tickets-list">
+
+                        {% for registration in registrations %}
+
+                        <article class="my-ticket-item">
+
+                            <h3>{{ registration.event_title }}</h3>
+
+                            <div class="my-ticket-date">
+                                <span data-icon="calendar" data-size="16"></span>
+
+                                <span>
+                                    {% if registration.event_date %}
+                                    {{ registration.event_date.strftime('%d %b %Y') }}
+                                    {% else %}
+                                    Date not available
+                                    {% endif %}
+                                </span>
+                            </div>
+
+                            <div class="my-ticket-time">
+                                <span data-icon="clock" data-size="16"></span>
+
+                                <span>
+                                    {% if registration.event_time %}
+                                    {{ registration.event_time.strftime('%I:%M %p') }}
+                                    {% else %}
+                                    Time not available
+                                    {% endif %}
+                                </span>
+                            </div>
+
+                        </article>
+
+                        {% endfor %}
+
+                    </div>
+
+                    {% else %}
+
+                    <p class="muted" style="margin-top: 16px;">
+                        You haven't registered for any events yet.
+                    </p>
+
+                    <div class="acts" style="justify-content: flex-start; margin-top: 16px;">
+                        <a class="btn ghost sm" href="{{ url_for('events.home') }}">
+                            Browse events
+                        </a>
+                    </div>
+
+                    {% endif %}
+
+                </section>
+                <!-- Attendance history -->
+                <section class="card pf-card">
+
+                    <h2>Attendance history</h2>
+
+                    <p class="sub">
+                        Events where your attendance has been recorded.
+                    </p>
+
+                    <p class="muted" style="margin-top: 16px;">
+                        No attendance records are available yet.
+                    </p>
+
+                </section>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- JavaScript -->
+    <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+
+</body>
+
+</html>

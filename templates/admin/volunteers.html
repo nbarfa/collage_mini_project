@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#070A17">
+    <title>Volunteers · UniGate</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body data-page="volunteers">
+<div class="adm view">
+    <aside class="side">
+        <a class="brand"
+           href="{{ url_for('admin.dashboard') }}"
+           aria-label="UniGate dashboard"
+           style="padding:6px 10px 18px">
+            <span class="logo">
+                <span data-icon="logo" data-size="30"></span>
+                UniGate
+            </span>
+        </a>
+
+        <a class="nv" href="{{ url_for('admin.dashboard') }}">
+            <span data-icon="grid" data-size="20"></span>
+            Overview
+        </a>
+
+        <a class="nv" href="{{ url_for('events.home') }}">
+            <span data-icon="cal" data-size="20"></span>
+            Events
+        </a>
+
+        <a class="nv" href="{{ url_for('admin.registrations_page') }}">
+            <span data-icon="users" data-size="20"></span>
+            Registrations
+        </a>
+
+        <button class="nv" type="button" disabled>
+            <span data-icon="scan" data-size="20"></span>
+            Check-in
+        </button>
+
+        <a class="nv" href="{{ url_for('admin.volunteers') }}" aria-current="page">
+            <span data-icon="shield" data-size="20"></span>
+            Volunteers
+        </a>
+        <div class="who">
+            <a class="avatar"
+               href="{{ url_for('auth.logout') }}"
+               title="Sign out"
+               aria-label="Sign out">
+                AD
+            </a>
+            <div>
+                <b>{{ current_user.name or current_user.email }}</b>
+                <small>Events office</small>
+            </div>
+        </div>
+    </aside>
+
+    <main class="am">
+        <div class="ah">
+            <div>
+                <h1 style="font-size:clamp(1.6rem,3vw,2.3rem)">
+                    Volunteers
+                </h1>
+                <p class="sub">
+                    People who can scan tickets at the gate.
+                    Add someone with their registered college email.
+                </p>
+            </div>
+        </div>
+
+        <!-- VOLUNTEER SUMMARY -->
+        <section class="vstats" aria-label="Volunteer summary">
+            <div class="card stat">
+                <div class="k">Assigned volunteers</div>
+                <div class="v" id="st-assigned">{{ assigned_count }}</div>
+                <small>with scanner access</small>
+            </div>
+            <div class="card stat">
+                <div class="k">On duty now</div>
+                <div class="v">—</div>
+                <small>Live duty tracking not configured</small>
+            </div>
+            <div class="card stat">
+                <div class="k">Tickets scanned</div>
+                <div class="v">—</div>
+                <small>Scan statistics not connected yet</small>
+            </div>
+        </section>
+
+        <!-- ASSIGN VOLUNTEER -->
+        <section class="card panel assign">
+            <h3>Assign a volunteer</h3>
+            <form id="assign-form" novalidate>
+                <div class="field">
+                    <label for="email-q">Registered college email</label>
+                    <div class="search">
+                        <span class="muted">
+                            <span data-icon="search" data-size="20"></span>
+                        </span>
+                        <input
+                            id="email-q"
+                            name="email"
+                            type="email"
+                            inputmode="email"
+                            autocomplete="off"
+                            placeholder="student@college.edu"
+                            aria-describedby="find-msg"
+                            required>
+                        <button class="btn primary sm"
+                                type="submit"
+                                id="find-btn">
+                            Find user
+                        </button>
+                    </div>
+                </div>
+                <div class="msg"
+                     id="find-msg"
+                     role="status"
+                     aria-live="polite"
+                     style="margin-top:10px"></div>
+            </form>
+            <div id="results" aria-live="polite"></div>
+        </section>
+
+        <!-- ASSIGN ADMIN -->
+        <section class="card panel assign" style="margin-top:18px">
+            <h3>Assign an admin</h3>
+            <p class="sub">
+                Give an existing registered user admin access using their college email.
+            </p>
+            <form id="admin-assign-form" novalidate>
+                <div class="field">
+                    <label for="admin-email-q">Registered college email</label>
+                    <div class="search">
+                        <span class="muted">
+                            <span data-icon="search" data-size="20"></span>
+                        </span>
+                        <input
+                            id="admin-email-q"
+                            name="email"
+                            type="email"
+                            inputmode="email"
+                            autocomplete="off"
+                            placeholder="student@college.edu"
+                            aria-describedby="admin-find-msg"
+                            required>
+                        <button
+                            class="btn primary sm"
+                            type="submit"
+                            id="admin-find-btn">
+                            Find user
+                        </button>
+                    </div>
+                </div>
+                <div class="msg"
+                     id="admin-find-msg"
+                     role="status"
+                     aria-live="polite"
+                     style="margin-top:10px"></div>
+            </form>
+            <div id="admin-results" aria-live="polite"></div>
+        </section>
+
+        <!-- ASSIGNED VOLUNTEERS -->
+        <section class="card panel">
+            <h3>
+                Assigned volunteers
+                <span class="pill info" id="vcount">
+                    {{ assigned_count }} volunteers
+                </span>
+            </h3>
+            <div class="tbar">
+                <input
+                    class="inp"
+                    id="vf"
+                    type="search"
+                    placeholder="Filter by name or email"
+                    aria-label="Filter volunteers">
+            </div>
+            <div class="msg"
+                 id="list-msg"
+                 role="status"
+                 aria-live="polite"></div>
+            <div class="tw">
+                <table class="vt">
+                    <thead>
+                        <tr>
+                            <th>Volunteer</th>
+                            <th>Status</th>
+                            <th>Scans</th>
+                            <th>Added</th>
+                            <th>
+                                <span class="sr-only"
+                                      style="position:absolute;left:-9999px">
+                                    Actions
+                                </span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="vbody">
+                        <tr>
+                            <td colspan="5">Loading volunteers...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ASSIGNED ADMINS -->
+        <section class="card panel" style="margin-top:18px">
+            <h3>
+                Assigned admins
+                <span class="pill info" id="acount">
+                    0 admins
+                </span>
+            </h3>
+            <div class="tbar">
+                <input
+                    class="inp"
+                    id="af"
+                    type="search"
+                    placeholder="Filter by name or email"
+                    aria-label="Filter admins">
+            </div>
+            <div class="msg"
+                 id="admin-list-msg"
+                 role="status"
+                 aria-live="polite"></div>
+            <div class="tw">
+                <table class="vt">
+                    <thead>
+                        <tr>
+                            <th>Admin</th>
+                            <th>Role</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="abody">
+                        <tr>
+                            <td colspan="3">Loading admins...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- REMOVE VOLUNTEER CONFIRMATION MODAL -->
+<div class="modal" id="modal" hidden>
+    <div class="modal-card card"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="m-title">
+        <h3 id="m-title">Remove this volunteer?</h3>
+        <p id="m-text">
+            This will remove the volunteer's scanner access.
+        </p>
+        <div class="actions">
+            <button class="btn"
+                    type="button"
+                    id="cancel-remove">
+                Cancel
+            </button>
+            <button class="btn danger"
+                    type="button"
+                    id="confirm-remove">
+                Remove volunteer
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ADMIN REMOVE CONFIRMATION MODAL -->
+<div class="modal" id="admin-modal" hidden>
+    <div class="modal-card card"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="admin-m-title">
+        <h3 id="admin-m-title">Remove admin access?</h3>
+        <p id="admin-m-text">
+            This will remove admin access from this user.
+        </p>
+        <div class="actions">
+            <button class="btn"
+                    type="button"
+                    id="admin-cancel-remove">
+                Cancel
+            </button>
+            <button class="btn danger"
+                    type="button"
+                    id="admin-confirm-remove">
+                Remove admin
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="toast"
+     id="toast"
+     role="status"
+     aria-live="polite"></div>
+
+<script>
+(() => {
+    const assignForm = document.getElementById("assign-form");
+    const emailInput = document.getElementById("email-q");
+    const findButton = document.getElementById("find-btn");
+    const findMessage = document.getElementById("find-msg");
+    const results = document.getElementById("results");
+
+    const volunteerFilter = document.getElementById("vf");
+    const volunteerBody = document.getElementById("vbody");
+    const volunteerCount = document.getElementById("vcount");
+    const assignedStat = document.getElementById("st-assigned");
+    const listMessage = document.getElementById("list-msg");
+
+    const modal = document.getElementById("modal");
+    const modalText = document.getElementById("m-text");
+    const cancelRemoveButton = document.getElementById("cancel-remove");
+    const confirmRemoveButton = document.getElementById("confirm-remove");
+
+    const adminSearchForm = document.getElementById("admin-assign-form");
+    const adminEmailInput = document.getElementById("admin-email-q");
+    const adminFindButton = document.getElementById("admin-find-btn");
+    const adminFindMessage = document.getElementById("admin-find-msg");
+    const adminResults = document.getElementById("admin-results");
+
+    const adminFilter = document.getElementById("af");
+    const adminBody = document.getElementById("abody");
+    const adminCount = document.getElementById("acount");
+    const adminListMessage = document.getElementById("admin-list-msg");
+
+    const adminModal = document.getElementById("admin-modal");
+    const adminModalText = document.getElementById("admin-m-text");
+    const adminCancelButton = document.getElementById("admin-cancel-remove");
+    const adminConfirmButton = document.getElementById("admin-confirm-remove");
+
+    const toast = document.getElementById("toast");
+
+    let volunteers = [];
+    let admins = [];
+    let selectedUser = null;
+    let selectedAdminUser = null;
+    let assignmentToRemove = null;
+    let adminToRemove = null;
+    let busy = false;
+
+    function escapeHTML(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add("show");
+
+        setTimeout(() => {
+            toast.classList.remove("show");
+        }, 3000);
+    }
+
+    function showMessage(element, message, type = "") {
+        element.textContent = message;
+        element.className = "msg";
+
+        if (type) {
+            element.classList.add(type);
+        }
+    }
+
+    async function apiRequest(url, options = {}) {
+        const response = await fetch(url, {
+            credentials: "same-origin",
+            ...options,
+            headers: {
+                Accept: "application/json",
+                ...(options.headers || {})
+            }
+        });
+
+        let data = {};
+
+        try {
+            data = await response.json();
+        } catch {
+            data = {};
+        }
+
+        if (!response.ok) {
+            throw new Error(
+                data.message ||
+                data.error ||
+                "Something went wrong."
+            );
+        }
+
+        return data;
+    }
+
+    // LOAD VOLUNTEERS
+    async function loadVolunteers() {
+        try {
+            showMessage(
+                listMessage,
+                "Loading volunteers...",
+                ""
+            );
+
+            const data = await apiRequest(
+                "{{ url_for('admin.volunteer_list') }}"
+            );
+
+            volunteers = data.volunteers || [];
+            renderVolunteers();
+
+            const count = volunteers.length;
+
+            volunteerCount.textContent =
+                count + (count === 1 ? " volunteer" : " volunteers");
+
+            assignedStat.textContent = count;
+
+            showMessage(
+                listMessage,
+                "",
+                ""
+            );
+        } catch (error) {
+            volunteerBody.innerHTML = `
+                <tr>
+                    <td colspan="5">Could not load volunteers.</td>
+                </tr>
+            `;
+
+            showMessage(
+                listMessage,
+                error.message,
+                "error"
+            );
+        }
+    }
+
+    // RENDER VOLUNTEERS
+    function renderVolunteers() {
+        const query = volunteerFilter.value
+            .trim()
+            .toLowerCase();
+
+        const filtered = volunteers.filter((item) => {
+            const name = String(
+                item.user?.name || ""
+            ).toLowerCase();
+
+            const email = String(
+                item.user?.email || ""
+            ).toLowerCase();
+
+            return (
+                !query ||
+                name.includes(query) ||
+                email.includes(query)
+            );
+        });
+
+        if (!filtered.length) {
+            volunteerBody.innerHTML = `
+                <tr>
+                    <td colspan="5">No volunteers found.</td>
+                </tr>
+            `;
+
+            return;
+        }
+
+        volunteerBody.innerHTML = filtered.map((item) => {
+            const user = item.user || {};
+
+            const name = escapeHTML(
+                user.name || "Unnamed user"
+            );
+
+            const email = escapeHTML(
+                user.email || ""
+            );
+
+            const added = item.assigned_at
+                ? new Date(item.assigned_at).toLocaleDateString()
+                : "—";
+
+            const scans =
+                item.scan_count ??
+                item.scans ??
+                0;
+
+            const status =
+                item.status ||
+                "Active";
+
+            return `
+                <tr>
+                    <td>
+                        <strong>${name}</strong>
+                        <br>
+                        <small>${email}</small>
+                    </td>
+                    <td>
+                        <span class="pill success">
+                            ${escapeHTML(status)}
+                        </span>
+                    </td>
+                    <td>${escapeHTML(scans)}</td>
+                    <td>${escapeHTML(added)}</td>
+                    <td>
+                        <button
+                            class="btn danger sm remove-volunteer"
+                            type="button"
+                            data-assignment-id="${escapeHTML(item.id)}"
+                            data-volunteer-name="${name}">
+                            Remove
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    // FIND VOLUNTEER USER
+    assignForm.addEventListener(
+        "submit",
+        async function (event) {
+            event.preventDefault();
+
+            const email = emailInput.value
+                .trim()
+                .toLowerCase();
+
+            results.innerHTML = "";
+
+            if (!email) {
+                showMessage(
+                    findMessage,
+                    "Please enter the registered user's email.",
+                    "error"
+                );
+
+                emailInput.focus();
+                return;
+            }
+
+            findButton.disabled = true;
+            findButton.textContent = "Searching...";
+
+            showMessage(
+                findMessage,
+                "Searching registered users...",
+                ""
+            );
+
+            try {
+                const url =
+                    "{{ url_for('admin.search_volunteer_user') }}" +
+                    "?email=" +
+                    encodeURIComponent(email);
+
+                const data = await apiRequest(url);
+
+                selectedUser = data.user;
+
+                showMessage(
+                    findMessage,
+                    "User found successfully.",
+                    "success"
+                );
+
+                renderFoundUser(data.user);
+            } catch (error) {
+                showMessage(
+                    findMessage,
+                    error.message,
+                    "error"
+                );
+            } finally {
+                findButton.disabled = false;
+                findButton.textContent = "Find user";
+            }
+        }
+    );
+
+    // DISPLAY SEARCHED VOLUNTEER USER
+    function renderFoundUser(user) {
+        results.innerHTML = `
+            <div class="card panel" style="margin-top:14px">
+                <h3>Registered user found</h3>
+                <p>
+                    <strong>
+                        ${escapeHTML(user.name || "Unnamed user")}
+                    </strong>
+                </p>
+                <p>
+                    ${escapeHTML(user.email)}
+                </p>
+                <p>
+                    ${
+                        user.already_assigned
+                            ? "This user is already assigned as a volunteer."
+                            : "This user can be assigned as a volunteer."
+                    }
+                </p>
+                <button
+                    class="btn primary sm"
+                    type="button"
+                    id="confirm-assign"
+                    ${user.already_assigned ? "disabled" : ""}>
+                    ${
+                        user.already_assigned
+                            ? "Already assigned"
+                            : "Assign volunteer"
+                    }
+                </button>
+            </div>
+        `;
+
+        const assignButton =
+            document.getElementById("confirm-assign");
+
+        if (assignButton && !user.already_assigned) {
+            assignButton.addEventListener(
+                "click",
+                assignVolunteer
+            );
+        }
+    }
+
+    // ASSIGN VOLUNTEER
+    async function assignVolunteer() {
+        if (!selectedUser || busy) {
+            return;
+        }
+
+        busy = true;
+
+        const assignButton =
+            document.getElementById("confirm-assign");
+
+        if (assignButton) {
+            assignButton.disabled = true;
+            assignButton.textContent = "Assigning...";
+        }
+
+        try {
+            const data = await apiRequest(
+                "{{ url_for('admin.assign_volunteer') }}",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        user_id: selectedUser.id
+                    })
+                }
+            );
+
+            showToast(
+                data.message ||
+                "Volunteer assigned successfully."
+            );
+
+            showMessage(
+                findMessage,
+                data.message ||
+                "Volunteer assigned successfully.",
+                "success"
+            );
+
+            results.innerHTML = "";
+            selectedUser = null;
+            emailInput.value = "";
+
+            await loadVolunteers();
+        } catch (error) {
+            showMessage(
+                findMessage,
+                error.message,
+                "error"
+            );
+
+            if (assignButton) {
+                assignButton.disabled = false;
+                assignButton.textContent = "Assign volunteer";
+            }
+        } finally {
+            busy = false;
+        }
+    }
+
+    // LOAD ADMINS
+    async function loadAdmins() {
+        try {
+            showMessage(
+                adminListMessage,
+                "Loading admins...",
+                ""
+            );
+
+            const data = await apiRequest(
+                "{{ url_for('admin.admin_list') }}"
+            );
+
+            admins = data.admins || [];
+            renderAdmins();
+
+            const count = admins.length;
+
+            adminCount.textContent =
+                count + (count === 1 ? " admin" : " admins");
+
+            showMessage(
+                adminListMessage,
+                "",
+                ""
+            );
+        } catch (error) {
+            adminBody.innerHTML = `
+                <tr>
+                    <td colspan="3">Could not load admins.</td>
+                </tr>
+            `;
+
+            showMessage(
+                adminListMessage,
+                error.message,
+                "error"
+            );
+        }
+    }
+
+    // RENDER ADMINS
+    function renderAdmins() {
+        const query = adminFilter.value
+            .trim()
+            .toLowerCase();
+
+        const filtered = admins.filter((item) => {
+            const name = String(
+                item.name || ""
+            ).toLowerCase();
+
+            const email = String(
+                item.email || ""
+            ).toLowerCase();
+
+            return (
+                !query ||
+                name.includes(query) ||
+                email.includes(query)
+            );
+        });
+
+        if (!filtered.length) {
+            adminBody.innerHTML = `
+                <tr>
+                    <td colspan="3">No admins found.</td>
+                </tr>
+            `;
+
+            return;
+        }
+
+        adminBody.innerHTML = filtered.map((admin) => {
+            const name = escapeHTML(
+                admin.name || "Unnamed user"
+            );
+
+            const email = escapeHTML(
+                admin.email || ""
+            );
+
+            return `
+                <tr>
+                    <td>
+                        <strong>${name}</strong>
+                        <br>
+                        <small>${email}</small>
+                    </td>
+                    <td>
+                        <span class="pill info">
+                            Admin
+                        </span>
+                    </td>
+                    <td>
+                        ${
+                            admin.is_current_admin
+                                ? `
+                                    <span class="muted">
+                                        Current admin
+                                    </span>
+                                `
+                                : `
+                                    <button
+                                        class="btn danger sm remove-admin"
+                                        type="button"
+                                        data-user-id="${escapeHTML(admin.id)}"
+                                        data-admin-name="${name}">
+                                        Remove
+                                    </button>
+                                `
+                        }
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    // DISPLAY SEARCHED ADMIN USER
+    function renderFoundAdminUser(user) {
+        selectedAdminUser = user;
+
+        adminResults.innerHTML = `
+            <div class="card panel" style="margin-top:14px">
+                <h3>Registered user found</h3>
+                <p>
+                    <strong>
+                        ${escapeHTML(user.name || "Unnamed user")}
+                    </strong>
+                </p>
+                <p>${escapeHTML(user.email)}</p>
+                <p>
+                    ${
+                        user.already_admin
+                            ? "This user is already an admin."
+                            : "This user can be assigned as an admin."
+                    }
+                </p>
+                <button
+                    class="btn primary sm"
+                    type="button"
+                    id="confirm-admin-assign"
+                    ${user.already_admin ? "disabled" : ""}>
+                    ${
+                        user.already_admin
+                            ? "Already admin"
+                            : "Assign admin"
+                    }
+                </button>
+            </div>
+        `;
+
+        const assignButton =
+            document.getElementById(
+                "confirm-admin-assign"
+            );
+
+        if (assignButton && !user.already_admin) {
+            assignButton.addEventListener(
+                "click",
+                assignAdmin
+            );
+        }
+    }
+
+    // SEARCH USER FOR ADMIN ASSIGNMENT
+    adminSearchForm.addEventListener(
+        "submit",
+        async function (event) {
+            event.preventDefault();
+
+            const email = adminEmailInput.value
+                .trim()
+                .toLowerCase();
+
+            adminResults.innerHTML = "";
+            selectedAdminUser = null;
+
+            if (!email) {
+                showMessage(
+                    adminFindMessage,
+                    "Please enter the registered user's email.",
+                    "error"
+                );
+
+                adminEmailInput.focus();
+                return;
+            }
+
+            adminFindButton.disabled = true;
+            adminFindButton.textContent = "Searching...";
+
+            showMessage(
+                adminFindMessage,
+                "Searching registered users...",
+                ""
+            );
+
+            try {
+                const url =
+                    "{{ url_for('admin.search_admin_user') }}" +
+                    "?email=" +
+                    encodeURIComponent(email);
+
+                const data = await apiRequest(url);
+
+                showMessage(
+                    adminFindMessage,
+                    "User found successfully.",
+                    "success"
+                );
+
+                renderFoundAdminUser(data.user);
+            } catch (error) {
+                showMessage(
+                    adminFindMessage,
+                    error.message,
+                    "error"
+                );
+            } finally {
+                adminFindButton.disabled = false;
+                adminFindButton.textContent = "Find user";
+            }
+        }
+    );
+
+    // ASSIGN ADMIN
+    async function assignAdmin() {
+        if (!selectedAdminUser || busy) {
+            return;
+        }
+
+        busy = true;
+
+        const assignButton =
+            document.getElementById(
+                "confirm-admin-assign"
+            );
+
+        if (assignButton) {
+            assignButton.disabled = true;
+            assignButton.textContent = "Assigning...";
+        }
+
+        try {
+            const data = await apiRequest(
+                "{{ url_for('admin.assign_admin') }}",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        user_id: selectedAdminUser.id
+                    })
+                }
+            );
+
+            showToast(
+                data.message ||
+                "Admin access assigned successfully."
+            );
+
+            showMessage(
+                adminFindMessage,
+                data.message ||
+                "Admin access assigned successfully.",
+                "success"
+            );
+
+            adminResults.innerHTML = "";
+            selectedAdminUser = null;
+            adminEmailInput.value = "";
+
+            await loadAdmins();
+            await loadVolunteers();
+        } catch (error) {
+            showMessage(
+                adminFindMessage,
+                error.message,
+                "error"
+            );
+
+            if (assignButton) {
+                assignButton.disabled = false;
+                assignButton.textContent = "Assign admin";
+            }
+        } finally {
+            busy = false;
+        }
+    }
+
+    // FILTER ADMINS
+    adminFilter.addEventListener(
+        "input",
+        renderAdmins
+    );
+
+    // OPEN ADMIN REMOVE CONFIRMATION
+    adminBody.addEventListener(
+        "click",
+        function (event) {
+            const button =
+                event.target.closest(".remove-admin");
+
+            if (!button) {
+                return;
+            }
+
+            adminToRemove = {
+                id: button.dataset.userId,
+                name: button.dataset.adminName
+            };
+
+            adminModalText.textContent =
+                "Remove admin access from " +
+                adminToRemove.name +
+                "?";
+
+            adminModal.hidden = false;
+        }
+    );
+
+    // CANCEL ADMIN REMOVAL
+    adminCancelButton.addEventListener(
+        "click",
+        function () {
+            adminModal.hidden = true;
+            adminToRemove = null;
+        }
+    );
+
+    // CLOSE ADMIN MODAL WHEN CLICKING OUTSIDE
+    adminModal.addEventListener(
+        "click",
+        function (event) {
+            if (event.target === adminModal) {
+                adminModal.hidden = true;
+                adminToRemove = null;
+            }
+        }
+    );
+
+    // CONFIRM ADMIN REMOVAL
+    adminConfirmButton.addEventListener(
+        "click",
+        async function () {
+            if (!adminToRemove || busy) {
+                return;
+            }
+
+            busy = true;
+            adminConfirmButton.disabled = true;
+            adminConfirmButton.textContent = "Removing...";
+
+            try {
+                const removeUrl =
+                    "{{ url_for('admin.remove_admin', user_id=0) }}"
+                        .replace(
+                            "/0/remove",
+                            "/" +
+                            encodeURIComponent(
+                                adminToRemove.id
+                            ) +
+                            "/remove"
+                        );
+
+                const data = await apiRequest(
+                    removeUrl,
+                    {
+                        method: "DELETE"
+                    }
+                );
+
+                adminModal.hidden = true;
+
+                showToast(
+                    data.message ||
+                    "Admin access removed successfully."
+                );
+
+                adminToRemove = null;
+
+                await loadAdmins();
+            } catch (error) {
+                showToast(error.message);
+            } finally {
+                busy = false;
+                adminConfirmButton.disabled = false;
+                adminConfirmButton.textContent = "Remove admin";
+            }
+        }
+    );
+
+    // FILTER VOLUNTEERS
+    volunteerFilter.addEventListener(
+        "input",
+        renderVolunteers
+    );
+
+    // OPEN VOLUNTEER REMOVE CONFIRMATION
+    volunteerBody.addEventListener(
+        "click",
+        function (event) {
+            const button =
+                event.target.closest(".remove-volunteer");
+
+            if (!button) {
+                return;
+            }
+
+            assignmentToRemove = {
+                id: button.dataset.assignmentId,
+                name: button.dataset.volunteerName
+            };
+
+            modalText.textContent =
+                "Remove " +
+                assignmentToRemove.name +
+                " from the assigned volunteers list?";
+
+            modal.hidden = false;
+        }
+    );
+
+    // CANCEL VOLUNTEER REMOVAL
+    cancelRemoveButton.addEventListener(
+        "click",
+        function () {
+            modal.hidden = true;
+            assignmentToRemove = null;
+        }
+    );
+
+    // CLOSE VOLUNTEER MODAL WHEN CLICKING OUTSIDE
+    modal.addEventListener(
+        "click",
+        function (event) {
+            if (event.target === modal) {
+                modal.hidden = true;
+                assignmentToRemove = null;
+            }
+        }
+    );
+
+    // CONFIRM VOLUNTEER REMOVAL
+    confirmRemoveButton.addEventListener(
+        "click",
+        async function () {
+            if (!assignmentToRemove || busy) {
+                return;
+            }
+
+            busy = true;
+            confirmRemoveButton.disabled = true;
+            confirmRemoveButton.textContent = "Removing...";
+
+            try {
+                const removeUrl =
+                    "{{ url_for('admin.remove_volunteer', assignment_id=0) }}"
+                        .replace(
+                            "/0/remove",
+                            "/" +
+                            encodeURIComponent(
+                                assignmentToRemove.id
+                            ) +
+                            "/remove"
+                        );
+
+                const data = await apiRequest(
+                    removeUrl,
+                    {
+                        method: "DELETE"
+                    }
+                );
+
+                modal.hidden = true;
+
+                showToast(
+                    data.message ||
+                    "Volunteer assignment removed successfully."
+                );
+
+                assignmentToRemove = null;
+
+                await loadVolunteers();
+            } catch (error) {
+                showToast(error.message);
+            } finally {
+                busy = false;
+                confirmRemoveButton.disabled = false;
+                confirmRemoveButton.textContent = "Remove volunteer";
+            }
+        }
+    );
+
+    // INITIAL LOAD
+    loadVolunteers();
+    loadAdmins();
+})();
+
+</script>
+
+<script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+
+</body>
+</html>

@@ -1,0 +1,303 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#070A17">
+
+    <title>Events · UniGate</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap"
+        rel="stylesheet">
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+
+<body data-page="home">
+
+    <!-- Header -->
+    <header class="top">
+
+        <a
+            class="brand"
+            href="{{ url_for('events.home') }}"
+            aria-label="UniGate home">
+
+            <span class="logo">
+                <span data-icon="logo" data-size="30"></span>
+                UniGate
+            </span>
+        </a>
+
+        <nav aria-label="Main navigation">
+
+            <a href="{{ url_for('events.home') }}" aria-current="page">
+                Events
+            </a>
+
+            {% if session.get('user_role') == 'admin' %}
+            <a href="{{ url_for('admin.dashboard') }}">
+                Admin Panel
+            </a>
+            {% endif %}
+
+            <a href="{{ url_for('auth.logout') }}">
+                Sign out
+            </a>
+
+        </nav>
+
+        {% if current_user and current_user.name %}
+        <a
+            class="avatar"
+            href="{{ url_for('events.profile') }}"
+            title="My profile"
+            aria-label="Open profile for {{ current_user.name }}">
+
+            {{ current_user.name[:2]|upper }}
+
+        </a>
+        {% endif %}
+
+    </header>
+
+    <!-- Main content -->
+    <main class="wrap view">
+
+        <!-- Hero section -->
+        <section class="hero">
+
+            <div>
+                <h1>Find an event, get a ticket, scan in.</h1>
+
+                <p>
+                    Welcome to UniGate. Explore university events and find
+                    the details you need. Events displayed here come from
+                    the portal database.
+                </p>
+
+                <label class="search">
+
+                    <span class="muted">
+                        <span data-icon="search" data-size="20"></span>
+                    </span>
+
+                    <input
+                        id="q"
+                        type="search"
+                        placeholder="Search events or venues"
+                        aria-label="Search events">
+
+                    <button
+                        class="btn primary sm"
+                        type="button"
+                        id="search-btn">
+                        Search
+                    </button>
+
+                </label>
+            </div>
+
+        </section>
+
+        <!-- Events heading -->
+        <div class="sec-h">
+            <h2>Upcoming events</h2>
+        </div>
+
+        <!-- Database events -->
+        <div class="egrid" id="grid">
+
+            {% if events %}
+
+                {% for event in events %}
+
+                <article class="ev card">
+
+                    <!-- Event artwork -->
+                    <div
+                        class="ev-art"
+                        style="--a:var(--p1); --b:var(--p3)">
+
+                        <div class="date">
+
+                            <b>
+                                {% if event.event_date %}
+                                    {{ event.event_date.strftime('%d') }}
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </b>
+
+                            <span>
+                                {% if event.event_date %}
+                                    {{ event.event_date.strftime('%b') }}
+                                {% else %}
+                                    TBA
+                                {% endif %}
+                            </span>
+
+                        </div>
+
+                        <span class="tag">University Event</span>
+
+                    </div>
+
+                    <!-- Event details -->
+                    <div class="ev-body">
+
+                        <h3>{{ event.title }}</h3>
+
+                        {% if event.description %}
+                        <p>{{ event.description }}</p>
+                        {% endif %}
+
+                        <div class="meta">
+                            <span data-icon="clock" data-size="15"></span>
+
+                            {% if event.start_time %}
+                                {{ event.start_time.strftime('%I:%M %p') }}
+                            {% else %}
+                                Time to be announced
+                            {% endif %}
+                        </div>
+
+                        <div class="meta">
+                            <span data-icon="pin" data-size="15"></span>
+                            {{ event.venue }}
+                        </div>
+
+                        {% if event.capacity %}
+                        <div class="meta">
+                            <span data-icon="users" data-size="15"></span>
+                            Capacity: {{ event.capacity }} seats
+                        </div>
+                        {% endif %}
+
+                        {% if event.allowed_branches or event.allowed_years %}
+
+                        <div class="meta">
+                            <span data-icon="shield" data-size="15"></span>
+
+                            {% if event.allowed_branches %}
+                                Branches: {{ event.allowed_branches }}
+                            {% else %}
+                                All branches
+                            {% endif %}
+
+                            {% if event.allowed_years %}
+                                · Years: {{ event.allowed_years }}
+                            {% endif %}
+                        </div>
+
+                        {% else %}
+
+                        <div class="meta">
+                            <span data-icon="shield" data-size="15"></span>
+                            Open to all branches and years
+                        </div>
+
+                        {% endif %}
+
+                        <!-- Open the selected event -->
+                        <div class="acts" style="margin-top: 16px;">
+                            <a
+                                class="btn primary wide"
+                                href="{{ url_for('events.event_detail', event_id=event.id) }}">
+                                View event
+                            </a>
+                        </div>
+
+                    </div>
+
+                </article>
+
+                {% endfor %}
+
+            {% else %}
+
+                <!-- Empty state -->
+                <div class="empty card" id="empty">
+
+                    <h3>No events available yet</h3>
+
+                    <p>
+                        There are currently no events in the database.
+                        Once an administrator creates an event, it will
+                        appear here.
+                    </p>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+        <!-- Search result message -->
+        <p id="no-results" hidden>
+            No events match your search.
+        </p>
+
+    </main>
+
+    <!-- Existing project JavaScript -->
+    <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+
+    <!-- Event search -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+
+            const searchInput = document.getElementById('q');
+            const eventCards = Array.from(
+                document.querySelectorAll('#grid .ev')
+            );
+
+            const noResults = document.getElementById('no-results');
+            const searchButton = document.getElementById('search-btn');
+
+            function filterEvents() {
+
+                const query = searchInput.value.trim().toLowerCase();
+                let visibleCount = 0;
+
+                eventCards.forEach(function (card) {
+
+                    const matches = card.textContent
+                        .toLowerCase()
+                        .includes(query);
+
+                    card.hidden = !matches;
+
+                    if (matches) {
+                        visibleCount++;
+                    }
+                });
+
+                noResults.hidden = query === '' || visibleCount > 0;
+            }
+
+            searchInput.addEventListener('input', filterEvents);
+
+            searchButton.addEventListener('click', function () {
+
+                filterEvents();
+
+                document.getElementById('grid').scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            });
+
+        });
+    </script>
+
+</body>
+</html>

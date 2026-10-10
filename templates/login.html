@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#070A17">
+  <title>Sign in · University Event Registration and QR Code Check-in Portal</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+
+  <style>
+    .project-brand {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      max-width: 390px;
+      margin-bottom: 38px;
+    }
+
+    .project-brand-icon {
+      flex-shrink: 0;
+      margin-top: 3px;
+    }
+
+    .project-brand-name {
+      font-family: 'Sora', sans-serif;
+      font-size: clamp(15px, 1.6vw, 20px);
+      font-weight: 700;
+      line-height: 1.5;
+      letter-spacing: -0.4px;
+      overflow-wrap: break-word;
+    }
+
+    .project-full-name {
+      max-width: 390px;
+      margin-bottom: 14px;
+      font-size: clamp(12px, 1.2vw, 15px);
+      font-weight: 600;
+      line-height: 1.7;
+      color: #A8B0D0;
+    }
+
+    @media (max-width: 480px) {
+      .project-brand {
+        gap: 9px;
+      }
+
+      .project-brand-name {
+        font-size: 15px;
+      }
+    }
+  </style>
+</head>
+
+<body data-page="login">
+  <section class="auth view">
+
+    <!-- LEFT SIDE: PROJECT BRANDING AND EVENT TICKETS -->
+    <aside class="auth-art">
+
+      <div class="project-brand">
+        <span class="project-brand-icon" data-icon="logo" data-size="30"></span>
+
+        <span class="project-brand-name">
+          University Event Registration and QR Code Check-in Portal
+        </span>
+      </div>
+
+      <div>
+        <h2>Register online. Scan at the gate.</h2>
+
+        <p>
+          Every registration gives you a QR ticket. Volunteers scan it
+          from their phone, so nobody waits in a paper list.
+        </p>
+      </div>
+
+      <div class="stack">
+
+        <div class="tk">
+          <div class="tk-main">
+            <h3>Ignite Tech Fest 2026</h3>
+
+            <div class="tk-meta">
+              <span>
+                <span data-icon="cal" data-size="15"></span>
+                Sat, 17 Oct, 10:00 AM
+              </span>
+
+              <span>
+                <span data-icon="pin" data-size="15"></span>
+                Main Auditorium
+              </span>
+            </div>
+
+            <div class="tk-who">Riya Verma, CSIT 3rd year</div>
+          </div>
+
+          <div class="tk-stub">
+            <div class="qr">
+              <svg data-qr="7"></svg>
+              <div class="scan"></div>
+            </div>
+
+            <div class="tk-id">UG-4F92-K7</div>
+          </div>
+
+          <div class="stamp">Checked in</div>
+        </div>
+
+        <div class="tk">
+          <div class="tk-main">
+            <h3>HackIPS Hackathon</h3>
+
+            <div class="tk-meta">
+              <span>
+                <span data-icon="cal" data-size="15"></span>
+                Fri, 23 Oct, 9:00 AM
+              </span>
+
+              <span>
+                <span data-icon="pin" data-size="15"></span>
+                Innovation Lab
+              </span>
+            </div>
+
+            <div class="tk-who">Riya Verma, CSIT 3rd year</div>
+          </div>
+
+          <div class="tk-stub">
+            <div class="qr">
+              <svg data-qr="21"></svg>
+              <div class="scan"></div>
+            </div>
+
+            <div class="tk-id">UG-91QX-M2</div>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- RIGHT SIDE: LOGIN FORM -->
+    <div class="auth-form">
+      <div class="fbox">
+
+        <h1>Welcome back</h1>
+
+        <p class="sub">
+          Sign in to access your account and upcoming events.
+        </p>
+
+        <form
+          class="form"
+          id="login-form"
+          action="{{ url_for('auth.login') }}"
+          method="POST"
+        >
+
+          <div class="field">
+            <label for="e">College email</label>
+
+            <input
+              class="inp"
+              id="e"
+              name="email"
+              type="email"
+              placeholder="you@college.edu"
+              autocomplete="email"
+              required
+            >
+          </div>
+
+          <div class="field">
+            <label for="pw">Password</label>
+
+            <div class="pwrow">
+              <input
+                class="inp"
+                id="pw"
+                name="password"
+                type="password"
+                placeholder="Enter your password"
+                autocomplete="current-password"
+                required
+              >
+
+              <button type="button" data-pw>Show</button>
+            </div>
+          </div>
+
+          <button
+            class="btn primary wide"
+            type="submit"
+            id="signin-btn"
+          >
+            Sign in
+          </button>
+
+          <div class="or">or</div>
+
+          <button class="btn ghost wide" type="button">
+            Continue with college Google account
+          </button>
+
+        </form>
+
+        <p class="foot">
+          New to the portal?
+          <a class="lnk" href="{{ url_for('auth.signup') }}">
+            Create an account
+          </a>
+        </p>
+
+      </div>
+    </div>
+
+  </section>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

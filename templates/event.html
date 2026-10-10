@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#070A17">
+
+    <title>{{ event.title }} · UniGate</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap"
+          rel="stylesheet">
+
+    <!-- Correct CSS path: static/css/styles.css -->
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+
+<body data-page="event">
+
+<header class="top">
+    <a class="brand"
+       href="{{ url_for('events.home') }}"
+       aria-label="UniGate home">
+        <span class="logo">
+            <span data-icon="logo" data-size="30"></span>
+            UniGate
+        </span>
+    </a>
+
+    <nav aria-label="Main">
+        <a href="{{ url_for('events.home') }}">Events</a>
+
+        {% if current_user %}
+            <a href="{{ url_for('events.profile') }}">My profile</a>
+        {% endif %}
+    </nav>
+
+    {% if current_user %}
+        <a class="avatar"
+           href="{{ url_for('events.profile') }}"
+           title="My profile"
+           aria-label="My profile">
+            {{ current_user.name[:1]|upper }}
+        </a>
+    {% else %}
+        <a class="avatar"
+           href="{{ url_for('auth.login') }}"
+           title="Log in"
+           aria-label="Log in">
+            Login
+        </a>
+    {% endif %}
+</header>
+
+<div class="wrap page view">
+
+    <a class="lnk back" href="{{ url_for('events.home') }}">
+        <span data-icon="back" data-size="16"></span>
+        All events
+    </a>
+
+    <div class="banner"
+         data-art
+         style="--a:var(--p1);--b:var(--p3)">
+
+        <svg viewBox="0 0 400 200"
+             preserveAspectRatio="xMidYMid slice"
+             data-motif="Tech"
+             aria-hidden="true"></svg>
+
+        <div class="date">
+            <b>{{ event.event_date.strftime('%d') }}</b>
+            <span>{{ event.event_date.strftime('%b') }}</span>
+        </div>
+
+        <span class="tag">University Event</span>
+    </div>
+
+    <div class="two">
+
+        <div>
+            <h1 style="margin-top:24px">{{ event.title }}</h1>
+
+            <div class="facts">
+
+                <div class="fact">
+                    <span data-icon="cal" data-size="20"></span>
+                    <div>
+                        <b>Date</b>
+                        <span>
+                            {{ event.event_date.strftime('%A, %d %B %Y') }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="fact">
+                    <span data-icon="clock" data-size="20"></span>
+                    <div>
+                        <b>Start time</b>
+                        <span>
+                            {{ event.start_time.strftime('%I:%M %p') }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="fact">
+                    <span data-icon="pin" data-size="20"></span>
+                    <div>
+                        <b>Venue</b>
+                        <span>{{ event.venue }}</span>
+                    </div>
+                </div>
+
+                <div class="fact">
+                    <span data-icon="users" data-size="20"></span>
+                    <div>
+                        <b>Organized by</b>
+                        <span>University Event Team</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="blk">
+                <h2>About this event</h2>
+
+                {% if event.description %}
+                    <p>{{ event.description }}</p>
+                {% else %}
+                    <p>
+                        More information about this event will be announced soon.
+                    </p>
+                {% endif %}
+            </div>
+
+            <div class="blk">
+                <h2>Event information</h2>
+
+                <p>
+                    Check the event date, starting time and venue before attending.
+                    Please follow the instructions provided by the event organizers.
+                </p>
+
+                {% if event.capacity is not none %}
+                    <p>
+                        <strong>Maximum capacity:</strong>
+                        {{ event.capacity }} attendees
+                    </p>
+                {% else %}
+                    <p>
+                        <strong>Capacity:</strong>
+                        No capacity limit specified
+                    </p>
+                {% endif %}
+            </div>
+
+            <div class="blk">
+                <h2>Who can attend?</h2>
+
+                {% if event.allowed_branches %}
+                    <p>
+                        <strong>Eligible branches:</strong>
+                        {{ event.allowed_branches.replace(',', ', ') }}
+                    </p>
+                {% else %}
+                    <p>This event is open to all branches.</p>
+                {% endif %}
+
+                {% if event.allowed_years %}
+                    <p>
+                        <strong>Eligible years:</strong>
+                        {{ event.allowed_years.replace(',', ', ') }}
+                    </p>
+                {% else %}
+                    <p>This event is open to all academic years.</p>
+                {% endif %}
+            </div>
+
+        </div>
+
+        <aside class="card sticky">
+
+            <div class="price">Free</div>
+
+            <p class="muted">
+                Review the event details before registering.
+            </p>
+
+            <div class="seats">
+                <div>
+                    <strong>Event capacity</strong>
+                </div>
+
+                {% if event.capacity is not none %}
+                    <small>
+                        Up to {{ event.capacity }} attendees
+                    </small>
+                {% else %}
+                    <small>No capacity limit specified</small>
+                {% endif %}
+            </div>
+
+            {% if current_user %}
+                <a class="btn primary wide"
+                   href="{{ url_for('events.event_detail', event_id=event.id) | replace('/detail', '/register') }}">
+                    Register for Event
+                </a>
+            {% else %}
+                <a class="btn primary wide"
+                   href="{{ url_for('auth.login') }}">
+                    Log in to continue
+                </a>
+            {% endif %}
+
+            <a class="btn ghost wide"
+               href="{{ url_for('events.home') }}">
+                Browse all events
+            </a>
+
+            <small class="muted">
+                Register for this event to continue to the registration form.
+            </small>
+
+        </aside>
+
+    </div>
+</div>
+
+<!-- Correct JavaScript path: static/js/app.js -->
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+</body>
+</html>

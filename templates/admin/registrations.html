@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#070A17">
+  <title>Registrations · UniGate</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body data-page="registrations">
+
+<div class="adm view">
+  <aside class="side">
+    <a class="brand" href="{{ url_for('admin.dashboard') }}" aria-label="UniGate home" style="padding:6px 10px 18px">
+      <span class="logo"><span data-icon="logo" data-size="30"></span>UniGate</span>
+    </a>
+
+
+    <a class="nv" href="{{ url_for('admin.dashboard') }}">
+      <span data-icon="grid" data-size="20"></span>
+      Overview
+    </a>
+
+    <a class="nv" href="{{ url_for('events.home') }}">
+      <span data-icon="cal" data-size="20"></span>
+      Events
+    </a>
+
+    <a class="nv" href="{{ url_for('admin.registrations_page') }}" aria-current="page">
+      <span data-icon="users" data-size="20"></span>
+      Registrations
+    </a>
+
+    <button class="nv" type="button" disabled>
+      <span data-icon="scan" data-size="20"></span>
+      Check-in
+    </button>
+
+    <a class="nv" href="{{ url_for('admin.volunteers') }}">
+      <span data-icon="shield" data-size="20"></span>
+      Volunteers
+    </a>
+    <div class="who">
+      <a class="avatar" href="{{ url_for('auth.login') }}" title="Sign out" aria-label="Sign out">AD</a>
+      <div>
+        <b>Admin</b>
+        <small>Events office</small>
+      </div>
+    </div>
+  </aside>
+
+  <div class="am">
+    <!-- Screen 1: events the admin created -->
+    <section id="reg-list-screen">
+      <div class="ah">
+        <div>
+          <h1 style="font-size:clamp(1.6rem,3vw,2.3rem);display:flex;gap:12px;align-items:center">
+            <span data-icon="users" data-size="28"></span>Registrations
+          </h1>
+          <p class="sub">Select an event to view its registered students.</p>
+        </div>
+      </div>
+
+      <ul class="reg-list" id="reg-events" style="margin-top:22px"></ul>
+    </section>
+
+    <!-- Screen 2: students registered for the chosen event -->
+    <section id="reg-detail" hidden>
+      <div class="card panel">
+        <div class="stu-head">
+          <button class="iconbtn" type="button" id="reg-back" aria-label="Back to all events">
+            <span data-icon="back" data-size="18"></span>
+          </button>
+
+          <div class="grow">
+            <h2 id="reg-title" style="font-size:1.5rem"></h2>
+            <p class="muted small" style="margin-top:2px">
+              Registered students · <span id="reg-meta"></span>
+            </p>
+          </div>
+
+          <span class="pill info" id="reg-count"></span>
+        </div>
+
+        <div class="stu-tools" id="stu-tools">
+          <input
+            class="inp"
+            id="stu-search"
+            type="search"
+            placeholder="Search by name or enrollment number"
+            aria-label="Search students"
+          >
+          <span class="muted small" id="stu-shown" role="status" aria-live="polite"></span>
+        </div>
+
+        <ul class="stu-list" id="stu-rows"></ul>
+      </div>
+
+      <p class="hint" style="margin-top:12px">
+        Only the student's name and enrollment number (plus branch and year) are shown. Email and other details stay private.
+      </p>
+    </section>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
