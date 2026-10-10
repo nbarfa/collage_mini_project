@@ -22,6 +22,8 @@ from models.event import Event
 from models.user import User
 from models.registration import Registration
 from utils.decorators import role_required
+from flask import send_file
+from services.qr_service import generate_qr_image
 
 
 events_bp = Blueprint(
@@ -851,4 +853,53 @@ def update_profile():
 
         return jsonify({
             "error": "Unable to update your profile. Please try again."
+        }), 500
+
+
+
+# =========================================================
+# QR TICKET IMAGE
+# GET /events/registration/<registration_id>/qr
+# =========================================================
+
+@events_bp.route(
+    "/registration/<int:registration_id>/qr",
+    methods=["GET"],
+)
+def registration_qr(registration_id):
+    # Require a logged-in user.
+    user_id = session.get("user_id")
+
+    if not user_id:
+        return jsonify({
+            "error": "Please log in to view your ticket."
+        }), 401
+
+    # Only allow the owner to access this registration's QR.
+    registration = Registration.query.filter_by(
+        id=registration_id,
+        user_id=user_id,
+    ).first()
+
+    if not registration:
+        return jsonify({
+            "error": "Ticket not found."
+        }), 404
+
+    try:
+        image_buffer = generate_qr_image(registration.qr_token)
+
+        response = send_file(
+            image_buffer,
+            mimetype="image/png",
+            download_name=f"ticket-{registration.id}.png",
+            as_attachment=False,
+        )
+
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    except Exception:
+        return jsonify({
+            "error": "Unable to generate the QR ticket."
         }), 500

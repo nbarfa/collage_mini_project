@@ -1,5 +1,5 @@
-
 from datetime import datetime
+import secrets
 
 from sqlalchemy import UniqueConstraint
 from database.db import db
@@ -34,8 +34,15 @@ class Registration(db.Model):
         nullable=False,
     )
 
-    # Prevent the same student from registering for
-    # the same event more than once.
+    # Unique QR ticket token for each registration.
+    qr_token = db.Column(
+        db.String(64),
+        unique=True,
+        nullable=False,
+        default=lambda: secrets.token_urlsafe(32),
+    )
+
+    # Prevent duplicate registrations for the same event.
     __table_args__ = (
         UniqueConstraint(
             "user_id",

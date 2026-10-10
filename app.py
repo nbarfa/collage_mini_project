@@ -10,6 +10,7 @@ from models.user import User
 from models.event import Event
 from models.volunteer_assignment import VolunteerAssignment
 from models.registration import Registration
+from models.checkin import Checkin
 
 
 def create_app():
