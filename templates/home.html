@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -16,9 +15,7 @@
         href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap"
         rel="stylesheet">
 
-    <link
-        rel="stylesheet"
-        href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 
 <body data-page="home">
@@ -26,10 +23,7 @@
     <!-- Header -->
     <header class="top">
 
-        <a
-            class="brand"
-            href="{{ url_for('events.home') }}"
-            aria-label="UniGate home">
+        <a class="brand" href="{{ url_for('events.home') }}" aria-label="UniGate home">
 
             <span class="logo">
                 <span data-icon="logo" data-size="30"></span>
@@ -49,6 +43,12 @@
             </a>
             {% endif %}
 
+            {% if session.get('user_id') and session.get('user_role') != 'admin' %}
+            <a href="{{ url_for('admin.volunteer_dashboard') }}">
+                Scan Tickets
+            </a>
+            {% endif %}
+
             <a href="{{ url_for('auth.logout') }}">
                 Sign out
             </a>
@@ -56,10 +56,7 @@
         </nav>
 
         {% if current_user and current_user.name %}
-        <a
-            class="avatar"
-            href="{{ url_for('events.profile') }}"
-            title="My profile"
+        <a class="avatar" href="{{ url_for('events.profile') }}" title="My profile"
             aria-label="Open profile for {{ current_user.name }}">
 
             {{ current_user.name[:2]|upper }}
@@ -90,16 +87,9 @@
                         <span data-icon="search" data-size="20"></span>
                     </span>
 
-                    <input
-                        id="q"
-                        type="search"
-                        placeholder="Search events or venues"
-                        aria-label="Search events">
+                    <input id="q" type="search" placeholder="Search events or venues" aria-label="Search events">
 
-                    <button
-                        class="btn primary sm"
-                        type="button"
-                        id="search-btn">
+                    <button class="btn primary sm" type="button" id="search-btn">
                         Search
                     </button>
 
@@ -118,124 +108,120 @@
 
             {% if events %}
 
-                {% for event in events %}
+            {% for event in events %}
 
-                <article class="ev card">
+            <article class="ev card">
 
-                    <!-- Event artwork -->
-                    <div
-                        class="ev-art"
-                        style="--a:var(--p1); --b:var(--p3)">
+                <!-- Event artwork -->
+                <div class="ev-art" style="--a:var(--p1); --b:var(--p3)">
 
-                        <div class="date">
+                    <div class="date">
 
-                            <b>
-                                {% if event.event_date %}
-                                    {{ event.event_date.strftime('%d') }}
-                                {% else %}
-                                    --
-                                {% endif %}
-                            </b>
+                        <b>
+                            {% if event.event_date %}
+                            {{ event.event_date.strftime('%d') }}
+                            {% else %}
+                            --
+                            {% endif %}
+                        </b>
 
-                            <span>
-                                {% if event.event_date %}
-                                    {{ event.event_date.strftime('%b') }}
-                                {% else %}
-                                    TBA
-                                {% endif %}
-                            </span>
-
-                        </div>
-
-                        <span class="tag">University Event</span>
+                        <span>
+                            {% if event.event_date %}
+                            {{ event.event_date.strftime('%b') }}
+                            {% else %}
+                            TBA
+                            {% endif %}
+                        </span>
 
                     </div>
 
-                    <!-- Event details -->
-                    <div class="ev-body">
+                    <span class="tag">University Event</span>
 
-                        <h3>{{ event.title }}</h3>
+                </div>
 
-                        {% if event.description %}
-                        <p>{{ event.description }}</p>
-                        {% endif %}
+                <!-- Event details -->
+                <div class="ev-body">
 
-                        <div class="meta">
-                            <span data-icon="clock" data-size="15"></span>
+                    <h3>{{ event.title }}</h3>
 
-                            {% if event.start_time %}
-                                {{ event.start_time.strftime('%I:%M %p') }}
-                            {% else %}
-                                Time to be announced
-                            {% endif %}
-                        </div>
+                    {% if event.description %}
+                    <p>{{ event.description }}</p>
+                    {% endif %}
 
-                        <div class="meta">
-                            <span data-icon="pin" data-size="15"></span>
-                            {{ event.venue }}
-                        </div>
+                    <div class="meta">
+                        <span data-icon="clock" data-size="15"></span>
 
-                        {% if event.capacity %}
-                        <div class="meta">
-                            <span data-icon="users" data-size="15"></span>
-                            Capacity: {{ event.capacity }} seats
-                        </div>
-                        {% endif %}
-
-                        {% if event.allowed_branches or event.allowed_years %}
-
-                        <div class="meta">
-                            <span data-icon="shield" data-size="15"></span>
-
-                            {% if event.allowed_branches %}
-                                Branches: {{ event.allowed_branches }}
-                            {% else %}
-                                All branches
-                            {% endif %}
-
-                            {% if event.allowed_years %}
-                                · Years: {{ event.allowed_years }}
-                            {% endif %}
-                        </div>
-
+                        {% if event.start_time %}
+                        {{ event.start_time.strftime('%I:%M %p') }}
                         {% else %}
-
-                        <div class="meta">
-                            <span data-icon="shield" data-size="15"></span>
-                            Open to all branches and years
-                        </div>
-
+                        Time to be announced
                         {% endif %}
-
-                        <!-- Open the selected event -->
-                        <div class="acts" style="margin-top: 16px;">
-                            <a
-                                class="btn primary wide"
-                                href="{{ url_for('events.event_detail', event_id=event.id) }}">
-                                View event
-                            </a>
-                        </div>
-
                     </div>
 
-                </article>
+                    <div class="meta">
+                        <span data-icon="pin" data-size="15"></span>
+                        {{ event.venue }}
+                    </div>
 
-                {% endfor %}
+                    {% if event.capacity %}
+                    <div class="meta">
+                        <span data-icon="users" data-size="15"></span>
+                        Capacity: {{ event.capacity }} seats
+                    </div>
+                    {% endif %}
+
+                    {% if event.allowed_branches or event.allowed_years %}
+
+                    <div class="meta">
+                        <span data-icon="shield" data-size="15"></span>
+
+                        {% if event.allowed_branches %}
+                        Branches: {{ event.allowed_branches }}
+                        {% else %}
+                        All branches
+                        {% endif %}
+
+                        {% if event.allowed_years %}
+                        · Years: {{ event.allowed_years }}
+                        {% endif %}
+                    </div>
+
+                    {% else %}
+
+                    <div class="meta">
+                        <span data-icon="shield" data-size="15"></span>
+                        Open to all branches and years
+                    </div>
+
+                    {% endif %}
+
+                    <!-- Open the selected event -->
+                    <div class="acts" style="margin-top: 16px;">
+                        <a class="btn primary wide" href="{{ url_for('events.event_detail', event_id=event.id) }}">
+                            View event
+                        </a>
+                    </div>
+
+                </div>
+
+            </article>
+
+            {% endfor %}
 
             {% else %}
 
-                <!-- Empty state -->
-                <div class="empty card" id="empty">
+            <!-- Empty state -->
+            <div class="empty card" id="empty">
 
-                    <h3>No events available yet</h3>
+                <h3>No events available yet</h3>
 
-                    <p>
-                        There are currently no events in the database.
-                        Once an administrator creates an event, it will
-                        appear here.
-                    </p>
+                <p>
+                    There are currently no events in the database.
+                    Once an administrator creates an event, it will
+                    appear here.
+                </p>
 
-                </div>
+            </div>
 
             {% endif %}
 
@@ -300,4 +286,5 @@
     </script>
 
 </body>
+
 </html>

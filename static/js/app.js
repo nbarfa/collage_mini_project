@@ -23,7 +23,10 @@ const ICONS = {
   down: '<path d="M12 3v12M6 11l6 6 6-6M4 21h16"/>',
   shield: '<path d="M12 2 4 5v6c0 5 3.4 9.3 8 11 4.6-1.7 8-6 8-11V5z"/><path d="m9 12 2 2 4-4"/>',
   chev: '<path d="m9 6 6 6-6 6"/>',
-  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>'
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>',
+  x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  alert: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
+  lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'
 };
 function icon(name, size = 18) {
   if (name === 'logo') return `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M3 9a3 3 0 0 1 3-3h20a3 3 0 0 1 3 3v3a4 4 0 0 0 0 8v3a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3v-3a4 4 0 0 0 0-8z" fill="currentColor"/><path d="M11 13h10M11 19h6" stroke="#fff" stroke-width="2.2" stroke-linecap="round" opacity=".9"/></svg>`;
@@ -562,6 +565,671 @@ function init() {
     search.addEventListener('input', drawStudents);
 
     loadRegistrations();
+  }
+
+
+  /* ---------- volunteer dashboard: current and upcoming events, event details, ticket scanner ---------- */
+  if (page === 'volunteer-dashboard') {
+    /* Real event data loaded from the Flask backend. */
+    let NOW = new Date();
+    let EVENTS = [];
+
+    const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+      MON = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
+    const esc = (s) =>
+      String(s).replace(
+        /[&<>"']/g,
+        (c) =>
+          ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+          })[c],
+      );
+    const ini = (n) =>
+      n
+        .split(' ')
+        .map((w) => w[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase();
+    const tm = (d) => {
+      let h = d.getHours();
+      const m = d.getMinutes(),
+        ap = h >= 12 ? 'PM' : 'AM';
+      h = h % 12 || 12;
+      return h + ':' + String(m).padStart(2, '0') + ' ' + ap;
+    };
+    const dl = (d) =>
+      DAYS[d.getDay()] + ', ' + d.getDate() + ' ' + MON[d.getMonth()];
+    const sod = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const sameDay = (a, b) => sod(a).getTime() === sod(b).getTime();
+    const when = (e) => tm(e.start);
+    const status = (e) => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const eventDate = new Date(e.start);
+      eventDate.setHours(0, 0, 0, 0);
+      if (eventDate < today) return 'past';
+      if (eventDate.getTime() === today.getTime()) return 'live';
+      return 'upcoming';
+    };
+    const byId = (id) => EVENTS.find((e) => e.id === id);
+    const pct = (e) => (e.reg ? Math.round((e.in / e.reg) * 100) : 0);
+    const startsIn = (e) => {
+      const n = Math.round((sod(e.start) - sod(NOW)) / 864e5);
+      return n === 0
+        ? 'Starts today at ' + tm(e.start)
+        : n === 1
+          ? 'Starts tomorrow'
+          : 'Starts in ' + n + ' days';
+    };
+    const art = (e) =>
+      `--a:var(--p${(e.id % 5) + 1});--b:var(--p${((e.id + 2) % 5) + 1})`;
+
+    /* ----- sample tickets (8 per event). Real tickets are signed tokens read from the QR. ----- */
+    const PEOPLE = [
+      ['Riya Verma', '0827CS241001'],
+      ['Aarav Sharma', '0808C1241172'],
+      ['Diya Verma', '0808C1241173'],
+      ['Kabir Patel', '0827EC231007'],
+      ['Ishita Joshi', '0827IT231022'],
+      ['Rohan Mehta', '0827CS231018'],
+      ['Meera Gupta', '0827CS241058'],
+      ['Vihaan Iyer', '0827ME241012'],
+    ];
+    const pool = (e) =>
+      PEOPLE.map((p, i) => ({
+        id:
+          'ADM-' +
+          (0x4a10 + e * 977 + i * 313).toString(16).toUpperCase() +
+          '-K' +
+          (i + 3),
+        name: p[0],
+        enroll: p[1],
+        event: e,
+      }));
+    const TICKETS = [0, 1, 2, 3, 4].flatMap(pool);
+    const state = {};
+    function ensureEventState(eventId) {
+      if (!state[eventId]) state[eventId] = { used: {}, recent: [] };
+      return state[eventId];
+    }
+    let clock = 12 * 60 + 30;
+    const clk = () =>
+      tm(new Date(2026, 9, 11, Math.floor(clock / 60), clock % 60));
+
+    /* ----- list screen ----- */
+    const liveCard = (
+      e,
+    ) => `<li><button class="card vd-ev live" type="button" data-open="${e.id}">
+      <span class="grow"><span class="pill vd-live"><span class="live-dot"></span>Live now</span>
+      <h3>${esc(e.t)}</h3>
+      <span class="meta">${icon('clock', 15)}${when(e)}</span>
+      <span class="meta">${icon('pin', 15)}${esc(e.venue)}</span>
+      <span class="seats"><span class="bar"><i style="width:${pct(e)}%"></i></span><small>${e.in} of ${e.reg} checked in</small></span></span>
+      <span class="chev">${icon('chev', 20)}</span></button></li>`;
+    const upCard = (
+      e,
+    ) => `<li><button class="card vd-ev" type="button" data-open="${e.id}">
+      <span class="dchip"><b>${String(e.start.getDate()).padStart(2, '0')}</b><span>${MON[e.start.getMonth()]}</span></span>
+      <span class="grow"><h3>${esc(e.t)}</h3>
+      <span class="meta">${icon('clock', 15)}${tm(e.start)} · ${startsIn(e)}</span>
+      <span class="meta">${icon('pin', 15)}${esc(e.venue)}</span></span>
+      <span class="chev">${icon('chev', 20)}</span></button></li>`;
+    function drawList() {
+      const vis = EVENTS.filter((e) => status(e) !== 'past').sort(
+        (a, b) => a.start - b.start,
+      );
+      const live = vis.filter((e) => status(e) === 'live'),
+        up = vis.filter((e) => status(e) === 'upcoming');
+      $('#live-count').textContent = live.length;
+      $('#up-count').textContent = up.length;
+      $('#live-list').innerHTML = live.length
+        ? live.map(liveCard).join('')
+        : '<li class="vd-empty card">Nothing is happening right now. Your next event is listed below.</li>';
+      $('#up-list').innerHTML = up.length
+        ? up.map(upCard).join('')
+        : '<li class="vd-empty card">No upcoming events yet.</li>';
+    }
+
+    /* ----- detail screen ----- */
+    const fact = (i, k, v) =>
+      `<div class="fact">${icon(i, 20)}<div><b>${k}</b><span>${esc(v)}</span></div></div>`;
+    function drawDetail(e) {
+      const live = status(e) === 'live';
+      const dateText = sameDay(e.start, e.end)
+        ? dl(e.start)
+        : dl(e.start) + ' to ' + dl(e.end);
+      const nums = live
+        ? `<div><b>${e.reg}</b><span>Registered</span></div><div><b>${e.in}</b><span>Checked in</span></div><div><b>${e.reg - e.in}</b><span>Still to arrive</span></div>`
+        : `<div><b>${e.reg}</b><span>Registered so far</span></div>`;
+      $('#vd-detail-body').innerHTML = `
+        <div class="banner" style="${art(e)}"><svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${MOTIF[e.cat]}</svg>
+          <div class="date"><b>${String(e.start.getDate()).padStart(2, '0')}</b><span>${MON[e.start.getMonth()]}</span></div><span class="tag">${e.cat}</span></div>
+        <div class="vd-title"><h1 data-focus>${esc(e.t)}</h1>${live ? '<span class="pill vd-live"><span class="live-dot"></span>Live now</span>' : '<span class="pill info">Upcoming</span>'}</div>
+        <div class="facts">${fact('cal', 'Date', dateText)}${fact('clock', 'Time', when(e))}${fact('pin', 'Venue', e.venue)}${fact('users', 'Organised by', e.org)}</div>
+        <section class="card vd-prog"><h2>${live ? 'Check-in so far' : 'Registrations'}</h2><div class="vd-nums">${nums}</div>${live ? `<div class="bar"><i style="width:${pct(e)}%"></i></div>` : ''}</section>
+        <div class="blk"><h2>Notes for volunteers</h2><ul class="vd-notes">
+          <li>Scan every ticket at the entrance, one student at a time.</li>
+          <li>Green means let them in. Amber or red means stop and send them to the organiser.</li>
+          <li>If the camera can't read a QR code, type the ticket ID instead.</li></ul></div>
+        ${live
+          ? `<button class="btn primary wide vd-scan" type="button" data-scan="${e.id}">${icon('scan', 22)} Scan tickets</button>`
+          : `<div><button class="btn primary wide vd-scan" type="button" disabled>${icon('lock', 20)} Scan tickets</button><p class="hint vd-lock">Scanning opens when this event starts, on ${dl(e.start)} at ${tm(e.start)}.</p></div>`
+        }`;
+    }
+
+    /* ----- scanner screen ----- */
+    let sc = null;
+    const KINDS = {
+      ok: ['ok', 'check'],
+      warn: ['warn', 'alert'],
+      bad: ['bad', 'x'],
+    };
+    const count = () => {
+      if (sc) $('#sc-count').textContent = sc.in + ' / ' + sc.reg + ' checked in';
+    };
+    const hint = () => {
+      const hintElement = $('#sc-hint');
+      if (!hintElement || !sc) return;
+      const eventState = ensureEventState(sc.id);
+      const n = pool(sc.id).find((p) => !eventState.used[p.id]);
+      hintElement.textContent = n ? n.id : 'none left';
+    };
+    const idle = () => {
+      $('#sc-result').innerHTML =
+        `<div class="vd-res idle"><span class="vd-ic">${icon('scan', 24)}</span><div><b class="vd-rt">Ready to scan</b><div class="muted small">Hold a ticket QR code inside the frame.</div></div></div>`;
+    };
+    function result(kind, title, name, line) {
+      const k = KINDS[kind];
+      $('#sc-result').innerHTML =
+        `<div class="vd-res ${k[0]}"><span class="vd-ic">${icon(k[1], 26)}</span><div><b class="vd-rt">${esc(title)}</b>${name ? `<div class="vd-rn">${esc(name)}</div>` : ''}<div class="muted small">${esc(line)}</div></div></div>`;
+    }
+    function drawRecent() {
+      const r = ensureEventState(sc.id).recent;
+      $('#sc-recent').innerHTML = r.length
+        ? r
+          .map(
+            (x) =>
+              `<li><span class="av">${ini(x.name)}</span><span class="nm"><b>${esc(x.name)}</b><small>${esc(x.sub)} · ${x.time}</small></span><span class="pill${x.cls === 'ok' ? '' : ' ' + x.cls}">${x.label}</span></li>`,
+          )
+          .join('')
+        : '<li class="muted small" style="padding:6px">Tickets you scan will be listed here.</li>';
+    }
+    function log(name, sub, cls, label) {
+      const r = ensureEventState(sc.id).recent;
+      r.unshift({ name, sub, cls, label, time: clk() });
+      if (r.length > 5) r.pop();
+      drawRecent();
+    }
+    function check(raw) {
+      const id = String(raw).trim().toUpperCase(),
+        st = ensureEventState(sc.id);
+      if (!id) {
+        result(
+          'bad',
+          'Enter a ticket ID',
+          '',
+          'Type the ID printed under the QR code.',
+        );
+        return;
+      }
+      const t = TICKETS.find((x) => x.id === id);
+      if (!t) {
+        result(
+          'bad',
+          'Ticket not valid',
+          '',
+          'This code is not an Admit ticket.',
+        );
+        log('Unknown ticket', id, 'bad', 'Not valid');
+        return;
+      }
+      if (t.event !== sc.id) {
+        result(
+          'bad',
+          'Wrong event',
+          t.name,
+          'This ticket is for ' + byId(t.event).t + '.',
+        );
+        log(t.name, t.enroll, 'bad', 'Wrong event');
+        return;
+      }
+      if (st.used[t.id]) {
+        result(
+          'warn',
+          'Already checked in',
+          t.name,
+          t.enroll + ' · scanned at ' + st.used[t.id],
+        );
+        log(t.name, t.enroll, 'warn', 'Already used');
+        return;
+      }
+      clock++;
+      st.used[t.id] = clk();
+      sc.in++;
+      count();
+      result('ok', 'Entry allowed', t.name, t.enroll + ' · ' + sc.t);
+      log(t.name, t.enroll, 'ok', 'Valid');
+    }
+
+
+    let cameraStream = null;
+    let cameraFrame = null;
+    let scanBusy = false;
+    let scanPausedUntil = 0;
+    let lastScannedToken = "";
+    let lastScannedAt = 0;
+
+    function stopVolunteerCamera() {
+      if (cameraFrame !== null) {
+        cancelAnimationFrame(cameraFrame);
+        cameraFrame = null;
+      }
+
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+      }
+
+      const video = document.querySelector("#sc-camera");
+
+      if (video) {
+        video.srcObject = null;
+      }
+    }
+
+    function showVolunteerScanMessage(message, type = "info") {
+      const result = document.querySelector("#sc-result");
+
+      if (!result) return;
+
+      result.replaceChildren();
+
+      const box = document.createElement("div");
+      box.className = "card panel";
+      box.setAttribute("role", "status");
+      box.style.padding = "16px";
+      box.style.marginTop = "12px";
+      box.style.whiteSpace = "pre-line";
+
+      if (type === "success") {
+        box.style.borderColor = "#20c997";
+      } else if (type === "error") {
+        box.style.borderColor = "#ef4444";
+      }
+
+      box.textContent = message;
+      result.appendChild(box);
+    }
+
+    async function submitRealTicketToken(token) {
+      token = String(token || "").trim();
+
+      if (!token || scanBusy) return;
+
+      scanBusy = true;
+      scanPausedUntil = Date.now() + 1800;
+
+      try {
+        if (!sc || !Number.isInteger(Number(sc.id))) {
+          throw new Error("Please select an event first.");
+        }
+
+        const response = await fetch(
+          `/admin/volunteer/events/${Number(sc.id)}/scan`,
+          {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            body: JSON.stringify({ token })
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          const messages = {
+            invalid_ticket: "Invalid Ticket.",
+            already_scanned: "QR Already Scanned.",
+            wrong_event: "Ticket belongs to another event.",
+            event_finished: "This event has already passed.",
+            unauthorized: "Please log in again.",
+            forbidden: "Volunteer access is required."
+          };
+
+          showVolunteerScanMessage(
+            messages[data.code] ||
+            data.message ||
+            "Unable to validate this ticket.",
+            "error"
+          );
+
+          scanPausedUntil = Date.now() + 2000;
+          scanBusy = false;
+          return;
+        }
+
+        const student = data.student || {};
+
+        showVolunteerScanMessage(
+          `✓ Confirmed\n\n` +
+          `Student: ${student.name || "Not available"}\n` +
+          `Enrollment: ${student.enrollment_number || "Not available"}\n` +
+          `Branch: ${student.branch || "Not available"}\n` +
+          `Year: ${student.year || "Not available"}`,
+          "success"
+        );
+
+        lastScannedToken = token;
+        lastScannedAt = Date.now();
+
+        // Prevent another scan while the confirmation is displayed.
+        scanPausedUntil = Date.now() + 5000;
+
+        // Resume automatically after five seconds.
+        setTimeout(() => {
+          scanBusy = false;
+          scanPausedUntil = Date.now();
+
+          const result = document.querySelector("#sc-result");
+          if (result) result.replaceChildren();
+        }, 5000);
+
+      } catch (error) {
+        console.error("Ticket scan failed:", error);
+
+        showVolunteerScanMessage(
+          error.message || "Unable to contact the server.",
+          "error"
+        );
+
+        scanPausedUntil = Date.now() + 2000;
+        scanBusy = false;
+      }
+    }
+
+    async function startVolunteerCamera() {
+      const video = document.querySelector("#sc-camera");
+      const message = document.querySelector("#sc-camera-message");
+
+      if (!video) {
+        console.error("Camera video element #sc-camera was not found.");
+        return;
+      }
+
+      if (!window.jsQR) {
+        showVolunteerScanMessage(
+          "QR scanner library failed to load. Check your internet connection and refresh.",
+          "error"
+        );
+        return;
+      }
+
+      try {
+        stopVolunteerCamera();
+
+        if (message) {
+          message.textContent = "Requesting camera permission...";
+          message.style.display = "block";
+        }
+
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } },
+          audio: false
+        });
+
+        video.srcObject = cameraStream;
+        video.style.display = "block";
+        await video.play();
+
+        if (message) message.style.display = "none";
+
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d", {
+          willReadFrequently: true
+        });
+
+        function scanFrame() {
+          const scannerScreen = document.querySelector("#vd-scan");
+
+          if (!scannerScreen || scannerScreen.hidden) {
+            stopVolunteerCamera();
+            return;
+          }
+
+          if (
+            video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+            video.videoWidth > 0 &&
+            video.videoHeight > 0 &&
+            !scanBusy &&
+            Date.now() >= scanPausedUntil
+          ) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const image = context.getImageData(
+              0, 0, canvas.width, canvas.height
+            );
+
+            const qr = window.jsQR(
+              image.data,
+              image.width,
+              image.height,
+              { inversionAttempts: "attemptBoth" }
+            );
+
+            if (qr && qr.data) {
+              const token = qr.data.trim();
+
+              // Avoid repeatedly submitting the same QR every video frame.
+              if (
+                token !== lastScannedToken ||
+                Date.now() - lastScannedAt > 7000
+              ) {
+                submitRealTicketToken(token);
+              }
+            }
+          }
+
+          cameraFrame = requestAnimationFrame(scanFrame);
+        }
+
+        cameraFrame = requestAnimationFrame(scanFrame);
+
+      } catch (error) {
+        console.error("Unable to start camera:", error);
+
+        if (message) {
+          message.textContent =
+            error.name === "NotAllowedError"
+              ? "Camera permission was denied. Allow camera access in your browser settings."
+              : "Unable to open the camera. Check that a camera is connected and available.";
+
+          message.style.display = "block";
+        }
+      }
+    }
+
+
+    function drawScan(e) {
+      sc = e;
+
+      ensureEventState(e.id);
+      $("#sc-title").textContent = e.t;
+      count();
+      idle();
+      drawRecent();
+      hint();
+
+      startVolunteerCamera();
+    }
+
+
+    /* ----- navigation: list > detail > scan, with the browser back button ----- */
+    const views = {
+      list: $('#vd-list'),
+      detail: $('#vd-detail'),
+      scan: $('#vd-scan'),
+    };
+    let cur = { view: 'list', id: -1 },
+      first = true;
+    function parse() {
+      const m = location.hash.match(/^#(event|scan)-(\d+)$/);
+      if (!m) return { view: 'list', id: -1 };
+      const e = byId(+m[2]);
+      if (!e || status(e) === 'past') return { view: 'list', id: -1 };
+      return {
+        view: m[1] === 'scan' && status(e) === 'live' ? 'scan' : 'detail',
+        id: e.id,
+      };
+    }
+    function render() {
+      Object.keys(views).forEach((k) => {
+        views[k].hidden = k !== cur.view;
+      });
+      if (cur.view === 'list') drawList();
+      else if (cur.view === 'detail') drawDetail(byId(cur.id));
+      else drawScan(byId(cur.id));
+      if (!first) {
+        const h = views[cur.view].querySelector('[data-focus]');
+        if (h) {
+          h.setAttribute('tabindex', '-1');
+          h.focus({ preventScroll: true });
+        }
+      }
+      first = false;
+    }
+    function go(view, id) {
+      cur = { view, id: id === undefined ? -1 : id };
+      render();
+      const h =
+        view === 'list'
+          ? location.pathname + location.search
+          : '#' + (view === 'detail' ? 'event' : 'scan') + '-' + id;
+      try {
+        history.pushState(null, '', h);
+      } catch (_) { }
+      window.scrollTo(0, 0);
+    }
+    const sync = () => {
+      const n = parse();
+      if (n.view !== cur.view || n.id !== cur.id) {
+        cur = n;
+        render();
+      }
+    };
+    window.addEventListener('popstate', sync);
+    window.addEventListener('hashchange', sync);
+
+    document.addEventListener('click', (ev) => {
+      const o = ev.target.closest('[data-open]'),
+        s = ev.target.closest('[data-scan]'),
+        b = ev.target.closest('[data-back]');
+      if (o) {
+        go('detail', +o.dataset.open);
+        return;
+      }
+      if (s && !s.disabled) {
+        go('scan', +s.dataset.scan);
+        return;
+      }
+      if (b) {
+        if (b.dataset.back === 'list') go('list');
+        else go('detail', cur.id);
+      }
+    });
+
+    $("#sc-manual").addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const input = $("#sc-id");
+      const token = input.value.trim();
+
+      if (!token) {
+        showVolunteerScanMessage(
+          "Please enter the QR token.",
+          "error"
+        );
+        return;
+      }
+
+      await submitRealTicketToken(token);
+      input.value = "";
+    });
+
+
+    async function loadVolunteerEvents() {
+      const liveList = $('#live-list');
+      const upcomingList = $('#up-list');
+      if (liveList) liveList.innerHTML = '<li class="vd-empty card">Loading events...</li>';
+      if (upcomingList) upcomingList.innerHTML = '';
+
+      try {
+        const response = await fetch('/admin/volunteer/events', {
+          method: 'GET',
+          credentials: 'same-origin',
+          headers: { Accept: 'application/json' }
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || `Unable to load events (HTTP ${response.status}).`);
+        }
+
+        EVENTS = (data.events || []).map((event) => {
+          const start = new Date(`${event.event_date}T${event.start_time || '00:00:00'}`);
+          return {
+            id: Number(event.id),
+            t: event.title || 'Untitled event',
+            cat: 'Tech',
+            venue: event.venue || 'Venue not specified',
+            org: 'University Event Team',
+            start,
+            end: start,
+            reg: 0,
+            in: 0,
+          };
+        });
+
+        NOW = new Date();
+        EVENTS.forEach((event) => ensureEventState(event.id));
+        cur = parse();
+        render();
+      } catch (error) {
+        console.error('Failed to load volunteer events:', error);
+        if (liveList) {
+          liveList.innerHTML = `<li class="vd-empty card">Unable to load events. Please refresh and try again.</li>`;
+        }
+        if (upcomingList) upcomingList.innerHTML = '';
+        $('#live-count').textContent = '0';
+        $('#up-count').textContent = '0';
+      }
+    }
+
+    cur = parse();
+    render();
+    loadVolunteerEvents();
   }
 
 

@@ -15,622 +15,507 @@
         href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap"
         rel="stylesheet">
 
-    <link
-        rel="stylesheet"
-        href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+
+    <style>
+        @media print {
+            body * {
+                visibility: hidden !important;
+            }
+
+            .done-wrap,
+            .done-wrap * {
+                visibility: visible !important;
+            }
+
+            .done-wrap {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                padding: 20px;
+            }
+
+            #download-ticket,
+            .done-wrap .acts a {
+                display: none !important;
+            }
+        }
+    </style>
 </head>
 
 <body data-page="register">
 
-<header class="top">
+    <header class="top">
+        <a class="brand" href="{{ url_for('events.home') }}" aria-label="UniGate home">
 
-    <a class="brand"
-       href="{{ url_for('events.home') }}"
-       aria-label="UniGate home">
-
-        <span class="logo">
-            <span data-icon="logo" data-size="30"></span>
-            UniGate
-        </span>
-
-    </a>
-
-    <nav aria-label="Main">
-
-        <a href="{{ url_for('events.home') }}">
-            Events
+            <span class="logo">
+                <span data-icon="logo" data-size="30"></span>
+                UniGate
+            </span>
         </a>
 
-        <a href="{{ url_for('events.profile') }}">
-            My tickets
+        <nav aria-label="Main">
+            <a href="{{ url_for('events.home') }}">
+                Events
+            </a>
+
+            <a href="{{ url_for('events.profile') }}">
+                My tickets
+            </a>
+        </nav>
+
+        <a class="avatar" href="{{ url_for('events.profile') }}" title="Your profile" aria-label="Your profile">
+
+            {{ current_user.name[:2].upper() if current_user.name else "U" }}
+        </a>
+    </header>
+
+    <div class="wrap page view">
+
+        <!-- Back to event -->
+        <a class="lnk back" href="{{ url_for('events.event_detail', event_id=event.id) }}">
+
+            <span data-icon="back" data-size="16"></span>
+            Back to event
         </a>
 
-    </nav>
+        <!-- Page heading -->
+        <h1 data-form-only style="font-size:clamp(1.8rem,3.4vw,2.6rem)">
+            Register for
+            <span data-bind="t">{{ event.title }}</span>
+        </h1>
 
-    <a class="avatar"
-       href="{{ url_for('events.profile') }}"
-       title="Your profile"
-       aria-label="Your profile">
+        <!-- Stepper -->
+        <div class="stepper" id="stepper" aria-label="Progress">
 
-        {{ current_user.name[:2].upper() if current_user.name else "U" }}
+            <div class="st on">
+                <i>1</i>
+                Your details
+            </div>
 
-    </a>
+            <div class="st">
+                <i>2</i>
+                Review
+            </div>
 
-</header>
+            <div class="st">
+                <i>3</i>
+                Your ticket
+            </div>
 
-<div class="wrap page view">
-
-    <!-- Back to event -->
-
-    <a class="lnk back"
-       href="{{ url_for('events.event_detail', event_id=event.id) }}">
-
-        <span data-icon="back" data-size="16"></span>
-
-        Back to event
-
-    </a>
-
-    <!-- Page heading -->
-
-    <h1 data-form-only style="font-size:clamp(1.8rem,3.4vw,2.6rem)">
-
-        Register for
-
-        <span data-bind="t">{{ event.title }}</span>
-
-    </h1>
-
-    <!-- Stepper -->
-
-    <div class="stepper" id="stepper" aria-label="Progress">
-
-        <div class="st on">
-            <i>1</i>
-            Your details
         </div>
 
-        <div class="st">
-            <i>2</i>
-            Review
-        </div>
+        <!-- Registration form -->
+        <form id="registration-form" method="POST"
+            action="{{ url_for('events.register_for_event', event_id=event.id) }}">
 
-        <div class="st">
-            <i>3</i>
-            Your ticket
-        </div>
+            <div class="rg" id="form-area">
 
-    </div>
+                <!-- STEP 1: YOUR DETAILS -->
+                <div class="card pad">
 
-    <!-- Registration form -->
+                    <div data-panel="1">
 
-    <form id="registration-form"
-          method="POST"
-          action="{{ url_for('events.register_for_event', event_id=event.id) }}">
+                        <div class="form" style="margin-top:0">
 
-        <div class="rg" id="form-area">
+                            <div class="row2">
 
-            <!-- ========================================= -->
-            <!-- STEP 1 : YOUR DETAILS -->
-            <!-- ========================================= -->
+                                <div class="field">
+                                    <label for="a">
+                                        Full name
+                                    </label>
 
-            <div class="card pad">
+                                    <input class="inp" id="a" name="name" type="text" value="{{ current_user.name }}"
+                                        readonly required>
+                                </div>
 
-                <div data-panel="1">
+                                <div class="field">
+                                    <label for="b">
+                                        Enrollment number
+                                    </label>
 
-                    <div class="form" style="margin-top:0">
-
-                        <div class="row2">
-
-                            <div class="field">
-
-                                <label for="a">
-                                    Full name
-                                </label>
-
-                                <input class="inp"
-                                       id="a"
-                                       name="name"
-                                       type="text"
-                                       value="{{ current_user.name }}"
-                                       readonly
-                                       required>
+                                    <input class="inp" id="b" name="enrollment" type="text"
+                                        value="{{ current_user.enrollment_number or '' }}" readonly required>
+                                </div>
 
                             </div>
 
                             <div class="field">
-
-                                <label for="b">
-                                    Enrollment number
+                                <label for="c">
+                                    College email
                                 </label>
 
-                                <input class="inp"
-                                       id="b"
-                                       name="enrollment"
-                                       type="text"
-                                       value="{{ current_user.enrollment_number or '' }}"
-                                       readonly
-                                       required>
-
+                                <input class="inp" id="c" name="email" type="email" value="{{ current_user.email }}"
+                                    readonly required>
                             </div>
 
-                        </div>
+                            <div class="row2">
 
-                        <div class="field">
+                                <div class="field">
+                                    <label for="d">
+                                        Phone number
+                                    </label>
 
-                            <label for="c">
-                                College email
-                            </label>
+                                    <input class="inp" id="d" name="phone" type="tel"
+                                        placeholder="Enter your phone number" value="">
+                                </div>
 
-                            <input class="inp"
-                                   id="c"
-                                   name="email"
-                                   type="email"
-                                   value="{{ current_user.email }}"
-                                   readonly
-                                   required>
+                                <div class="field">
+                                    <label for="brn">
+                                        Branch and year
+                                    </label>
 
-                        </div>
+                                    <select class="inp" id="brn" name="branch_year" disabled required>
 
-                        <div class="row2">
+                                        {% set allowed_branches = event.allowed_branches.split(',') if
+                                        event.allowed_branches else [] %}
+                                        {% set allowed_years = event.allowed_years.split(',') if event.allowed_years
+                                        else [] %}
 
-                            <div class="field">
+                                        {% if allowed_branches and allowed_years %}
 
-                                <label for="d">
-                                    Phone number
-                                </label>
+                                        {% for branch in allowed_branches %}
+                                        {% for year in allowed_years %}
 
-                                <input class="inp"
-                                       id="d"
-                                       name="phone"
-                                       type="tel"
-                                       placeholder="Enter your phone number"
-                                       value="">
+                                        {% set branch_value = branch.strip() %}
+                                        {% set year_value = year.strip() %}
 
-                            </div>
+                                        <option value="{{ branch_value }}|{{ year_value }}" {% if
+                                            current_user.branch==branch_value and current_user.year|string==year_value
+                                            %} selected {% endif %}>
 
-                            <div class="field">
+                                            {{ branch_value }}, {{ year_value }}{{ 'st' if year_value == '1' else 'nd'
+                                            if year_value == '2' else 'rd' if year_value == '3' else 'th' }} year
 
-                                <label for="brn">
-                                    Branch and year
-                                </label>
+                                        </option>
 
-                                <select class="inp"
-                                        id="brn"
-                                        name="branch_year"
-                                        disabled
-                                        required>
+                                        {% endfor %}
+                                        {% endfor %}
 
-                                    {% set allowed_branches = event.allowed_branches.split(',') if event.allowed_branches else [] %}
-                                    {% set allowed_years = event.allowed_years.split(',') if event.allowed_years else [] %}
-
-                                    {% if allowed_branches and allowed_years %}
+                                        {% elif allowed_branches %}
 
                                         {% for branch in allowed_branches %}
 
-                                            {% for year in allowed_years %}
+                                        {% set branch_value = branch.strip() %}
 
-                                                {% set branch_value = branch.strip() %}
-                                                {% set year_value = year.strip() %}
+                                        <option value="{{ branch_value }}|{{ current_user.year }}" {% if
+                                            current_user.branch==branch_value %} selected {% endif %}>
 
-                                                <option value="{{ branch_value }}|{{ year_value }}"
-                                                    {% if current_user.branch == branch_value and current_user.year|string == year_value %}
-                                                        selected
-                                                    {% endif %}>
+                                            {{ branch_value }}, {{ current_user.year }}{{ 'st' if current_user.year == 1
+                                            else 'nd' if current_user.year == 2 else 'rd' if current_user.year == 3 else
+                                            'th' }} year
 
-                                                    {{ branch_value }}, {{ year_value }}{{ 'st' if year_value == '1' else 'nd' if year_value == '2' else 'rd' if year_value == '3' else 'th' }} year
-
-                                                </option>
-
-                                            {% endfor %}
+                                        </option>
 
                                         {% endfor %}
 
-                                    {% elif allowed_branches %}
-
-                                        {% for branch in allowed_branches %}
-
-                                            {% set branch_value = branch.strip() %}
-
-                                            <option value="{{ branch_value }}|{{ current_user.year }}"
-                                                {% if current_user.branch == branch_value %}
-                                                    selected
-                                                {% endif %}>
-
-                                                {{ branch_value }}, {{ current_user.year }}{{ 'st' if current_user.year == 1 else 'nd' if current_user.year == 2 else 'rd' if current_user.year == 3 else 'th' }} year
-
-                                            </option>
-
-                                        {% endfor %}
-
-                                    {% elif allowed_years %}
+                                        {% elif allowed_years %}
 
                                         {% for year in allowed_years %}
 
-                                            {% set year_value = year.strip() %}
+                                        {% set year_value = year.strip() %}
 
-                                            <option value="{{ current_user.branch }}|{{ year_value }}"
-                                                {% if current_user.year|string == year_value %}
-                                                    selected
-                                                {% endif %}>
+                                        <option value="{{ current_user.branch }}|{{ year_value }}" {% if
+                                            current_user.year|string==year_value %} selected {% endif %}>
 
-                                                {{ current_user.branch }}, {{ year_value }}{{ 'st' if year_value == '1' else 'nd' if year_value == '2' else 'rd' if year_value == '3' else 'th' }} year
+                                            {{ current_user.branch }}, {{ year_value }}{{ 'st' if year_value == '1' else
+                                            'nd' if year_value == '2' else 'rd' if year_value == '3' else 'th' }} year
 
-                                            </option>
+                                        </option>
 
                                         {% endfor %}
 
-                                    {% else %}
+                                        {% else %}
 
                                         <option value="{{ current_user.branch }}|{{ current_user.year }}" selected>
 
                                             {{ current_user.branch }},
-                                            {{ current_user.year }}{{ 'st' if current_user.year == 1 else 'nd' if current_user.year == 2 else 'rd' if current_user.year == 3 else 'th' }} year
+                                            {{ current_user.year }}{{ 'st' if current_user.year == 1 else 'nd' if
+                                            current_user.year == 2 else 'rd' if current_user.year == 3 else 'th' }} year
 
                                         </option>
 
-                                    {% endif %}
+                                        {% endif %}
 
-                                </select>
+                                    </select>
+                                </div>
+
+                            </div>
+
+                            <div class="field" id="team-field" hidden>
+                                <label for="tm">
+                                    Team name (optional)
+                                </label>
+
+                                <input class="inp" id="tm" name="team"
+                                    placeholder="Leave empty to be matched with a team">
+                            </div>
+
+                            <div class="acts">
+
+                                <a class="btn ghost" href="{{ url_for('events.event_detail', event_id=event.id) }}">
+                                    Cancel
+                                </a>
+
+                                <button class="btn primary" type="button" data-step="2">
+                                    Continue to review
+                                </button>
 
                             </div>
 
                         </div>
 
-                        <div class="field" id="team-field" hidden>
+                    </div>
 
-                            <label for="tm">
-                                Team name (optional)
+                    <!-- STEP 2: REVIEW -->
+                    <div data-panel="2" hidden>
+
+                        <div class="form" style="margin-top:0">
+
+                            <dl class="dl">
+
+                                <div>
+                                    <dt>Name</dt>
+                                    <dd id="review-name">
+                                        {{ current_user.name }}
+                                    </dd>
+                                </div>
+
+                                <div>
+                                    <dt>Enrollment</dt>
+                                    <dd id="review-enrollment">
+                                        {{ current_user.enrollment_number or '—' }}
+                                    </dd>
+                                </div>
+
+                                <div>
+                                    <dt>Email</dt>
+                                    <dd id="review-email">
+                                        {{ current_user.email }}
+                                    </dd>
+                                </div>
+
+                                <div>
+                                    <dt>Branch</dt>
+                                    <dd id="review-branch">
+                                        {{ current_user.branch }},
+                                        {{ current_user.year }}{{ 'st' if current_user.year == 1 else 'nd' if
+                                        current_user.year == 2 else 'rd' if current_user.year == 3 else 'th' }} year
+                                    </dd>
+                                </div>
+
+                            </dl>
+
+                            <div class="field">
+                                <label>
+                                    Meal preference
+                                </label>
+
+                                <div class="chips">
+
+                                    <button class="chip" type="button" data-meal="Veg" aria-pressed="true">
+                                        Veg
+                                    </button>
+
+                                    <button class="chip" type="button" data-meal="Non-veg" aria-pressed="false">
+                                        Non-veg
+                                    </button>
+
+                                    <button class="chip" type="button" data-meal="Jain" aria-pressed="false">
+                                        Jain
+                                    </button>
+
+                                    <button class="chip" type="button" data-meal="No meal" aria-pressed="false">
+                                        No meal
+                                    </button>
+
+                                </div>
+                            </div>
+
+                            <label style="display:flex;gap:10px;align-items:flex-start">
+
+                                <input type="checkbox" checked style="margin-top:5px;accent-color:var(--accent)"
+                                    required>
+
+                                <span>
+                                    I will carry my college ID and show my QR ticket at the gate.
+                                </span>
+
                             </label>
 
-                            <input class="inp"
-                                   id="tm"
-                                   name="team"
-                                   placeholder="Leave empty to be matched with a team">
+                            <div class="acts">
 
-                        </div>
-
-                        <div class="acts">
-
-                            <a class="btn ghost"
-                               href="{{ url_for('events.event_detail', event_id=event.id) }}">
-
-                                Cancel
-
-                            </a>
-
-                            <button class="btn primary"
-                                    type="button"
-                                    data-step="2">
-
-                                Continue to review
-
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <!-- ========================================= -->
-                <!-- STEP 2 : REVIEW -->
-                <!-- ========================================= -->
-
-                <div data-panel="2" hidden>
-
-                    <div class="form" style="margin-top:0">
-
-                        <dl class="dl">
-
-                            <div>
-
-                                <dt>Name</dt>
-
-                                <dd id="review-name">
-                                    {{ current_user.name }}
-                                </dd>
-
-                            </div>
-
-                            <div>
-
-                                <dt>Enrollment</dt>
-
-                                <dd id="review-enrollment">
-                                    {{ current_user.enrollment_number or '—' }}
-                                </dd>
-
-                            </div>
-
-                            <div>
-
-                                <dt>Email</dt>
-
-                                <dd id="review-email">
-                                    {{ current_user.email }}
-                                </dd>
-
-                            </div>
-
-                            <div>
-
-                                <dt>Branch</dt>
-
-                                <dd id="review-branch">
-
-                                    {{ current_user.branch }},
-                                    {{ current_user.year }}{{ 'st' if current_user.year == 1 else 'nd' if current_user.year == 2 else 'rd' if current_user.year == 3 else 'th' }} year
-
-                                </dd>
-
-                            </div>
-
-                        </dl>
-
-                        <div class="field">
-
-                            <label>
-                                Meal preference
-                            </label>
-
-                            <div class="chips">
-
-                                <button class="chip"
-                                        type="button"
-                                        data-meal="Veg"
-                                        aria-pressed="true">
-
-                                    Veg
-
+                                <button class="btn ghost" type="button" data-step="1">
+                                    Edit details
                                 </button>
 
-                                <button class="chip"
-                                        type="button"
-                                        data-meal="Non-veg"
-                                        aria-pressed="false">
-
-                                    Non-veg
-
-                                </button>
-
-                                <button class="chip"
-                                        type="button"
-                                        data-meal="Jain"
-                                        aria-pressed="false">
-
-                                    Jain
-
-                                </button>
-
-                                <button class="chip"
-                                        type="button"
-                                        data-meal="No meal"
-                                        aria-pressed="false">
-
-                                    No meal
-
+                                <button class="btn primary" type="submit">
+                                    Confirm registration
                                 </button>
 
                             </div>
 
                         </div>
 
-                        <label style="display:flex;gap:10px;align-items:flex-start">
-
-                            <input type="checkbox"
-                                   checked
-                                   style="margin-top:5px;accent-color:var(--accent)"
-                                   required>
-
-                            <span>
-                                I will carry my college ID and show my QR ticket at the gate.
-                            </span>
-
-                        </label>
-
-                        <div class="acts">
-
-                            <button class="btn ghost"
-                                    type="button"
-                                    data-step="1">
-
-                                Edit details
-
-                            </button>
-
-                            <button class="btn primary"
-                                    type="submit">
-
-                                Confirm registration
-
-                            </button>
-
-                        </div>
-
                     </div>
 
                 </div>
 
-            </div>
+                <!-- EVENT INFORMATION -->
+                <aside class="card pad" style="display:grid;gap:14px;align-content:start">
 
-            <!-- ========================================= -->
-            <!-- EVENT INFORMATION -->
-            <!-- ========================================= -->
+                    <div class="mini-art" data-art style="--a:var(--p1);--b:var(--p3)">
 
-            <aside class="card pad"
-                   style="display:grid;gap:14px;align-content:start">
-
-                <div class="mini-art"
-                     data-art
-                     style="--a:var(--p1);--b:var(--p3)">
-
-                    <svg viewBox="0 0 400 200"
-                         preserveAspectRatio="xMidYMid slice"
-                         data-motif="Tech"
-                         aria-hidden="true">
-                    </svg>
-
-                </div>
-
-                <h3 data-bind="t">
-                    {{ event.title }}
-                </h3>
-
-                <div class="meta">
-
-                    <span data-icon="cal" data-size="15"></span>
-
-                    <span>
-                        {{ event.event_date.strftime('%A, %d %B %Y') }}
-                    </span>
-
-                </div>
-
-                <div class="meta">
-
-                    <span data-icon="clock" data-size="15"></span>
-
-                    <span>
-                        {{ event.start_time.strftime('%I:%M %p') }}
-                    </span>
-
-                </div>
-
-                <div class="meta">
-
-                    <span data-icon="pin" data-size="15"></span>
-
-                    <span>
-                        {{ event.venue }}
-                    </span>
-
-                </div>
-
-                <dl class="dl">
-
-                    <div>
-
-                        <dt>Ticket</dt>
-
-                        <dd>General entry</dd>
+                        <svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice" data-motif="Tech"
+                            aria-hidden="true">
+                        </svg>
 
                     </div>
-
-                    <div>
-
-                        <dt>Quantity</dt>
-
-                        <dd>1</dd>
-
-                    </div>
-
-                    <div>
-
-                        <dt>Total</dt>
-
-                        <dd>Free</dd>
-
-                    </div>
-
-                </dl>
-
-            </aside>
-
-        </div>
-
-    </form>
-
-    <!-- ========================================= -->
-    <!-- STEP 3 : TICKET -->
-    <!-- ========================================= -->
-
-    <div class="done-wrap"
-         data-panel="3"
-         hidden>
-
-        <span class="check">
-
-            <span data-icon="check" data-size="30"></span>
-
-        </span>
-
-        <div>
-
-            <h1 style="font-size:clamp(1.8rem,3.6vw,2.6rem)">
-                You're registered
-            </h1>
-
-            <p class="sub" style="margin-inline:auto">
-                Your registration has been completed successfully.
-            </p>
-
-        </div>
-
-        <div class="drop"
-             style="width:100%;display:grid;justify-items:center">
-
-            <div class="tk">
-
-                <div class="tk-main">
 
                     <h3 data-bind="t">
                         {{ event.title }}
                     </h3>
 
-                    <div class="tk-meta">
-
+                    <div class="meta">
+                        <span data-icon="cal" data-size="15"></span>
                         <span>
+                            {{ event.event_date.strftime('%A, %d %B %Y') }}
+                        </span>
+                    </div>
 
-                            <span data-icon="cal" data-size="15"></span>
+                    <div class="meta">
+                        <span data-icon="clock" data-size="15"></span>
+                        <span>
+                            {{ event.start_time.strftime('%I:%M %p') }}
+                        </span>
+                    </div>
+
+                    <div class="meta">
+                        <span data-icon="pin" data-size="15"></span>
+                        <span>
+                            {{ event.venue }}
+                        </span>
+                    </div>
+
+                    <dl class="dl">
+
+                        <div>
+                            <dt>Ticket</dt>
+                            <dd>General entry</dd>
+                        </div>
+
+                        <div>
+                            <dt>Quantity</dt>
+                            <dd>1</dd>
+                        </div>
+
+                        <div>
+                            <dt>Total</dt>
+                            <dd>Free</dd>
+                        </div>
+
+                    </dl>
+
+                </aside>
+
+            </div>
+
+        </form>
+
+        <!-- STEP 3: TICKET -->
+        <div class="done-wrap" data-panel="3" hidden>
+
+            <span class="check">
+                <span data-icon="check" data-size="30"></span>
+            </span>
+
+            <div>
+                <h1 style="font-size:clamp(1.8rem,3.6vw,2.6rem)">
+                    You're registered
+                </h1>
+
+                <p class="sub" style="margin-inline:auto">
+                    Your registration has been completed successfully.
+                </p>
+            </div>
+
+            <div class="drop" style="width:100%;display:grid;justify-items:center">
+
+                <div class="tk">
+
+                    <div class="tk-main">
+
+                        <h3 data-bind="t">
+                            {{ event.title }}
+                        </h3>
+
+                        <div class="tk-meta">
 
                             <span>
+                                <span data-icon="cal" data-size="15"></span>
 
-                                {{ event.event_date.strftime('%A, %d %B %Y') }},
-                                {{ event.start_time.strftime('%I:%M %p') }}
-
+                                <span>
+                                    {{ event.event_date.strftime('%A, %d %B %Y') }},
+                                    {{ event.start_time.strftime('%I:%M %p') }}
+                                </span>
                             </span>
-
-                        </span>
-
-                        <span>
-
-                            <span data-icon="pin" data-size="15"></span>
 
                             <span>
-                                {{ event.venue }}
+                                <span data-icon="pin" data-size="15"></span>
+
+                                <span>
+                                    {{ event.venue }}
+                                </span>
                             </span>
 
-                        </span>
+                        </div>
+
+                        <div class="tk-who">
+                            {{ current_user.name }},
+                            {{ current_user.branch }}
+                            {{ current_user.year }}{{ 'st' if current_user.year == 1 else 'nd' if current_user.year == 2
+                            else 'rd' if current_user.year == 3 else 'th' }} year
+                        </div>
 
                     </div>
 
-                    <div class="tk-who">
+                    <div class="tk-stub">
 
-                        {{ current_user.name }},
-                        {{ current_user.branch }}
-                        {{ current_user.year }}{{ 'st' if current_user.year == 1 else 'nd' if current_user.year == 2 else 'rd' if current_user.year == 3 else 'th' }} year
+                        <div class="qr">
 
-                    </div>
+                            {% if registration is defined and registration %}
 
-                </div>
+                            <img id="ticket-qr"
+                                src="{{ url_for('events.registration_qr', registration_id=registration.id) }}"
+                                alt="Scannable UniGate ticket QR code"
+                                style="width:150px;height:150px;object-fit:contain;">
 
-                <div class="tk-stub">
+                            {% else %}
 
-                    <div class="qr">
+                            <p class="sub" style="font-size:12px;text-align:center;">
+                                Your QR ticket will appear after registration is loaded.
+                            </p>
 
-                        <svg data-qr="{{ event.id }}"
-                             data-ticket-qr>
-                        </svg>
+                            {% endif %}
 
-                        <div class="scan once"></div>
+                            <div class="scan once"></div>
 
-                    </div>
+                        </div>
 
-                    <div class="tk-id"
-                         data-bind="tid">
+                        <div class="tk-id" id="ticket-id">
 
-                        ADM-334-K7
+                            {% if registration is defined and registration %}
+
+                            Ticket ID: UG-{{ "%06d"|format(registration.id) }}
+
+                            {% else %}
+
+                            UniGate Ticket
+
+                            {% endif %}
+
+                        </div>
 
                     </div>
 
@@ -638,34 +523,27 @@
 
             </div>
 
-        </div>
+            <div class="acts" style="justify-content:center">
 
-        <div class="acts"
-             style="justify-content:center">
+                {% if registration is defined and registration %}
+                <a class="btn primary" id="download-ticket" href="{{ url_for(
+                        'events.download_registration_ticket',
+                        registration_id=registration.id) }}">
+                    Download PDF Ticket
+                </a>
+                {% endif %}
 
-            <button class="btn primary"
-                    type="button">
+                <a class="btn ghost" href="{{ url_for('events.home') }}">
+                    Browse more events
+                </a>
 
-                <span data-icon="down" data-size="18"></span>
-
-                Download ticket
-
-            </button>
-
-            <a class="btn ghost"
-               href="{{ url_for('events.home') }}">
-
-                Browse more events
-
-            </a>
+            </div>
 
         </div>
 
     </div>
 
-</div>
-
-<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 
 </body>
 

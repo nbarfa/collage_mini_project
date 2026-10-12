@@ -16,6 +16,8 @@ from database.db import db
 from models.event import Event
 from models.user import User
 from models.volunteer_assignment import VolunteerAssignment
+from sqlalchemy.exc import IntegrityError
+from models.checkin import Checkin
 
 
 # =========================================================
@@ -898,3 +900,277 @@ def registration_list():
         "count": len(result),
         "registrations": result,
     }), 200
+
+
+
+@admin_bp.route(
+    "/volunteer/events/<int:event_id>/scan",
+    methods=["POST"],
+)
+def volunteer_scan_ticket(event_id):
+    """Validate a ticket and record a volunteer check-in."""
+
+    # 1. Verify login.
+    user_id = session.get("user_id")
+
+    if not user_id:
+        return jsonify({
+            "success": False,
+            "code": "unauthorized",
+            "message": "Please log in to scan tickets.",
+        }), 401
+
+    volunteer = db.session.get(User, user_id)
+
+    if not volunteer:
+        return jsonify({
+            "success": False,
+            "code": "unauthorized",
+            "message": "Volunteer account not found.",
+        }), 401
+
+    # 2. Verify that this user has been assigned volunteer access.
+    assignment = VolunteerAssignment.query.filter_by(
+        user_id=volunteer.id
+    ).first()
+
+    if volunteer.role == "admin" or not assignment:
+        return jsonify({
+            "success": False,
+            "code": "forbidden",
+            "message": "Volunteer access is required.",
+        }), 403
+
+    # 3. Read the QR token sent by the scanner.
+    data = request.get_json(silent=True) or {}
+    token = str(data.get("token") or "").strip()
+
+    if not token:
+        return jsonify({
+            "success": False,
+            "code": "missing_token",
+            "message": "No QR token was provided.",
+        }), 400
+
+    # 4. Verify the selected event.
+    event = db.session.get(Event, event_id)
+
+    if not event:
+        return jsonify({
+            "success": False,
+            "code": "event_not_found",
+            "message": "Event not found.",
+        }), 404
+
+    # Reject tickets for past events.
+    if event.event_date < datetime.now().date():
+        return jsonify({
+            "success": False,
+            "code": "event_finished",
+            "message": "This event has already passed.",
+        }), 400
+
+    # 5. Find the registration associated with this QR token.
+    registration = Registration.query.filter_by(
+        qr_token=token
+    ).first()
+
+    if not registration:
+        return jsonify({
+            "success": False,
+            "code": "invalid_ticket",
+            "message": "Invalid Ticket.",
+        }), 404
+
+    # 6. Ensure the ticket belongs to the selected event.
+    if registration.event_id != event.id:
+        return jsonify({
+            "success": False,
+            "code": "wrong_event",
+            "message": "Ticket belongs to another event.",
+        }), 400
+
+    # 7. Reject tickets that have already been checked in.
+    existing_checkin = Checkin.query.filter_by(
+        registration_id=registration.id
+    ).first()
+
+    if existing_checkin:
+        return jsonify({
+            "success": False,
+            "code": "already_scanned",
+            "message": "QR Already Scanned.",
+        }), 409
+
+    # 8. Retrieve the registered student's details.
+    student = db.session.get(User, registration.user_id)
+
+    if not student:
+        return jsonify({
+            "success": False,
+            "code": "student_not_found",
+            "message": "Student details could not be found.",
+        }), 404
+
+    # 9. Record the check-in immediately after a valid scan.
+    checkin = Checkin(
+        registration_id=registration.id,
+        checked_in_by=volunteer.id,
+    )
+
+    try:
+        db.session.add(checkin)
+        db.session.commit()
+
+    except IntegrityError:
+        # The unique registration_id constraint protects against
+        # two volunteers scanning the same ticket simultaneously.
+        db.session.rollback()
+
+        existing_checkin = Checkin.query.filter_by(
+            registration_id=registration.id
+        ).first()
+
+        if existing_checkin:
+            return jsonify({
+                "success": False,
+                "code": "already_scanned",
+                "message": "QR Already Scanned.",
+            }), 409
+
+        return jsonify({
+            "success": False,
+            "code": "checkin_failed",
+            "message": "Unable to record the check-in. Please try again.",
+        }), 500
+
+    # 10. Return the student's details to the scanner interface.
+    return jsonify({
+        "success": True,
+        "code": "confirmed",
+        "message": "Confirmed",
+        "student": {
+            "name": student.name,
+            "enrollment_number": student.enrollment_number,
+            "branch": student.branch,
+            "year": student.year,
+        },
+        "event": {
+            "id": event.id,
+            "title": event.title,
+        },
+        "checked_in_at": (
+            checkin.checked_in_at.isoformat()
+            if checkin.checked_in_at
+            else None
+        ),
+    }), 200
+
+
+
+@admin_bp.route(
+    "/volunteer/events",
+    methods=["GET"],
+)
+def volunteer_upcoming_events():
+    """Return current and upcoming events for volunteers."""
+
+    # Verify login.
+    user_id = session.get("user_id")
+
+    if not user_id:
+        return jsonify({
+            "success": False,
+            "message": "Please log in first.",
+        }), 401
+
+    volunteer = db.session.get(User, user_id)
+
+    if not volunteer:
+        return jsonify({
+            "success": False,
+            "message": "Volunteer account not found.",
+        }), 401
+
+    # Verify volunteer access.
+    assignment = VolunteerAssignment.query.filter_by(
+        user_id=volunteer.id
+    ).first()
+
+    if volunteer.role == "admin" or not assignment:
+        return jsonify({
+            "success": False,
+            "message": "Volunteer access is required.",
+        }), 403
+
+    # Exclude past events.
+    today = datetime.now().date()
+
+    events = (
+        Event.query
+        .filter(Event.event_date >= today)
+        .order_by(Event.event_date.asc())
+        .all()
+    )
+
+    # Return only the details needed for event selection.
+    event_list = []
+
+    for event in events:
+        event_list.append({
+            "id": event.id,
+            "title": event.title,
+            "description": event.description,
+            "venue": event.venue,
+            "event_date": (
+                event.event_date.isoformat()
+                if event.event_date
+                else None
+            ),
+            "start_time": (
+                str(event.start_time)
+                if event.start_time
+                else None
+            ),
+        })
+
+    return jsonify({
+        "success": True,
+        "events": event_list,
+    }), 200
+# =========================================================
+# VOLUNTEER DASHBOARD PAGE
+# GET /admin/volunteer/dashboard
+# =========================================================
+
+@admin_bp.route("/volunteer/dashboard", methods=["GET"])
+def volunteer_dashboard():
+    user_id = session.get("user_id")
+
+    if not user_id:
+        return redirect(url_for("auth.login"))
+
+    try:
+        user = db.session.get(User, int(user_id))
+    except (TypeError, ValueError):
+        user = None
+
+    if not user:
+        return redirect(url_for("auth.login"))
+
+    # Admin accounts should use the admin dashboard.
+    if user.role == "admin":
+        return redirect(url_for("admin.dashboard"))
+
+    # Only users assigned volunteer access can open this page.
+    assignment = VolunteerAssignment.query.filter_by(
+        user_id=user.id
+    ).first()
+
+    if not assignment:
+        flash("Volunteer access is required.", "error")
+        return redirect(url_for("events.home"))
+
+    return render_template(
+        "volunteer/volunteer-dashboard.html"
+    )

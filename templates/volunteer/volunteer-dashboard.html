@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#070A17">
+
+    <title>Volunteer Dashboard · UniGate</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+
+<body data-page="volunteer-dashboard">
+
+    <header class="top">
+        <a class="brand" href="{{ url_for('events.home') }}" aria-label="UniGate home">
+            <span class="logo">
+                <span data-icon="logo" data-size="30"></span>
+                UniGate
+            </span>
+        </a>
+
+        <span class="pill info">Volunteer Dashboard</span>
+
+        <span style="flex: 1"></span>
+
+        <a class="btn primary" href="{{ url_for('events.home') }}" title="Return to home page">
+            Home
+        </a>
+    </header>
+
+    <main class="vd view">
+
+        <!-- Screen 1: Current and upcoming events -->
+        <section id="vd-list" class="vd-screen">
+
+            <div>
+                <h1 data-focus>Volunteer Dashboard</h1>
+                <p class="sub">
+                    Select an event to view its details and scan tickets.
+                </p>
+            </div>
+
+            <div class="vd-sec">
+                <h2>
+                    Happening today
+                    <span class="pill" id="live-count">0</span>
+                </h2>
+
+                <ul class="vd-list" id="live-list"></ul>
+            </div>
+
+            <div class="vd-sec">
+                <h2>
+                    Upcoming
+                    <span class="pill info" id="up-count">0</span>
+                </h2>
+
+                <ul class="vd-list" id="up-list"></ul>
+            </div>
+
+            <p class="hint">
+                Past events are not shown here.
+            </p>
+
+        </section>
+
+        <!-- Screen 2: Event details -->
+        <section id="vd-detail" class="vd-screen" hidden>
+
+            <button class="lnk back" type="button" data-back="list">
+                <span data-icon="back" data-size="16"></span>
+                All events
+            </button>
+
+            <div id="vd-detail-body" class="vd-screen"></div>
+
+        </section>
+
+        <!-- Screen 3: Ticket scanner -->
+        <section id="vd-scan" class="vd-screen" hidden>
+
+            <div class="vd-scan-head">
+
+                <button class="iconbtn" type="button" data-back="detail" aria-label="Back to event details">
+                    <span data-icon="back" data-size="18"></span>
+                </button>
+
+                <div class="grow">
+                    <h2 id="sc-title" data-focus></h2>
+                    <p class="muted small">Scan event tickets</p>
+                </div>
+
+                <span class="pill info" id="sc-count"></span>
+
+            </div>
+
+            <div class="scanner vd-cam">
+                <video id="sc-camera" autoplay playsinline muted style="width: 100%; display: none;"></video>
+
+                <span class="vd-sim" id="sc-camera-message">
+                    Camera will start when scanning is connected.
+                </span>
+
+                <div class="f">
+                    <i></i>
+                    <i></i>
+                    <i></i>
+                    <i></i>
+                    <div class="scan"></div>
+                </div>
+
+                <p>Point the camera at the ticket QR code.</p>
+            </div>
+
+            <div id="sc-result" role="status" aria-live="assertive"></div>
+
+            <details class="vd-manual">
+                <summary>Can't scan? Enter the ticket ID</summary>
+
+                <form id="sc-manual">
+
+                    <label for="sc-id" style="position: absolute; left: -9999px;">
+                        Ticket QR token
+                    </label>
+
+                    <input class="inp" id="sc-id" name="token" placeholder="Enter ticket QR token" autocomplete="off">
+
+                    <button class="btn primary" type="submit">
+                        Check ticket
+                    </button>
+
+                </form>
+            </details>
+
+            <section class="card panel">
+                <h3>Your recent scans</h3>
+                <ul class="feed" id="sc-recent"></ul>
+            </section>
+
+        </section>
+
+    </main>
+
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+</body>
+
+</html>

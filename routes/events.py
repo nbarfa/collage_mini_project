@@ -1,5 +1,6 @@
 from datetime import datetime, date
 from sqlalchemy.exc import IntegrityError
+from flask import current_app
 from flask import (
     Blueprint,
     request,
@@ -24,6 +25,7 @@ from models.registration import Registration
 from utils.decorators import role_required
 from flask import send_file
 from services.qr_service import generate_qr_image
+from services.pdf_ticket_service import generate_ticket_pdf
 
 
 events_bp = Blueprint(
@@ -504,10 +506,7 @@ def event_detail(event_id):
 @events_bp.route("/<int:event_id>/register", methods=["GET"])
 def registration_page(event_id):
 
-    # -----------------------------------------------------
     # Get logged-in user
-    # -----------------------------------------------------
-
     user_id = session.get("user_id")
 
     if not user_id:
@@ -524,24 +523,40 @@ def registration_page(event_id):
         )
         return redirect(url_for("auth.login"))
 
-    # -----------------------------------------------------
     # Find event
-    # -----------------------------------------------------
-
     event = db.session.get(Event, event_id)
 
     if not event:
         flash("Event not found.", "error")
         return redirect(url_for("events.home"))
 
-    # -----------------------------------------------------
-    # Show registration page
-    # -----------------------------------------------------
+    # Find this user's registration for this event
+    registration = Registration.query.filter_by(
+        user_id=user.id,
+        event_id=event.id,
+    ).first()
 
+    # Get the requested step
+    step = request.args.get("step", default=1, type=int)
+
+    if step not in (1, 2, 3):
+        step = 1
+
+    # Only show the ticket step if registration exists
+    if step == 3 and not registration:
+        flash(
+            "Please register for this event before viewing your ticket.",
+            "error",
+        )
+        step = 1
+
+    # Display the registration page
     return render_template(
         "register.html",
         event=event,
         current_user=user,
+        registration=registration,
+        step=step,
     )
 
 
@@ -902,4 +917,75 @@ def registration_qr(registration_id):
     except Exception:
         return jsonify({
             "error": "Unable to generate the QR ticket."
+        }), 500
+
+
+
+@events_bp.route(
+    "/registration/<int:registration_id>/ticket.pdf",
+    methods=["GET"],
+)
+def download_registration_ticket(registration_id):
+    # Check that the student is logged in.
+    user_id = session.get("user_id")
+
+    if not user_id:
+        return jsonify({
+            "error": "Please log in to download your ticket."
+        }), 401
+
+    # Only allow the owner of this registration to download the ticket.
+    registration = Registration.query.filter_by(
+        id=registration_id,
+        user_id=user_id,
+    ).first()
+
+    if not registration:
+        return jsonify({
+            "error": "Ticket not found."
+        }), 404
+
+    # Load the event and student details.
+    event = db.session.get(Event, registration.event_id)
+    user = db.session.get(User, user_id)
+
+    if not event or not user:
+        return jsonify({
+            "error": "Event or student details could not be found."
+        }), 404
+
+    try:
+        # Generate the A4 PDF using the actual registration QR token.
+        pdf_buffer = generate_ticket_pdf(
+            event_title=event.title,
+            event_date=str(event.event_date) if event.event_date else "",
+            event_time=str(event.start_time) if event.start_time else "",
+            venue=event.venue,
+            student_name=user.name,
+            branch=user.branch,
+            year=user.year,
+            ticket_id=f"UG-{registration.id:06d}",
+            qr_token=registration.qr_token,
+        )
+
+        # Send the PDF as a downloadable file.
+        response = send_file(
+            pdf_buffer,
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=f"UniGate-Ticket-UG-{registration.id:06d}.pdf",
+        )
+
+        response.headers["Cache-Control"] = "no-store"
+
+        return response
+
+    except Exception:
+        current_app.logger.exception(
+            "Failed to generate PDF ticket for registration %s",
+            registration_id,
+        )
+
+        return jsonify({
+            "error": "Unable to generate your PDF ticket."
         }), 500
