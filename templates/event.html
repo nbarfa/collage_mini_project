@@ -56,6 +56,22 @@
 </header>
 
 <div class="wrap page view">
+        <!-- Flash notifications -->
+    <div class="flash-container" id="event-flash-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="flash-message flash-{{ category }}" role="alert">
+                    <span>{{ message }}</span>
+                    <button
+                        type="button"
+                        class="flash-close"
+                        aria-label="Close notification"
+                        onclick="this.parentElement.remove()"
+                    >&times;</button>
+                </div>
+            {% endfor %}
+        {% endwith %}
+    </div>
 
     <a class="lnk back" href="{{ url_for('events.home') }}">
         <span data-icon="back" data-size="16"></span>

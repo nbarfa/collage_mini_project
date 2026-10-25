@@ -289,30 +289,8 @@ function init() {
   if (page === 'volunteers') {
     /* Demo data. In the real app: USERS comes from a lookup of registered users (GET /api/users?email=),
        VOLS from GET /api/volunteers, and assign / remove become POST / DELETE calls. */
-    const USERS = [
-      { name: 'Riya Verma', email: 'riya.verma@college.edu', enroll: '0827CS241001', branch: 'CSIT', year: '3rd year', events: 9 },
-      { name: 'Aman Joshi', email: 'aman.joshi@college.edu', enroll: '0827CS221014', branch: 'Computer Science', year: '4th year', events: 12 },
-      { name: 'Sneha Patil', email: 'sneha.patil@college.edu', enroll: '0827IT231022', branch: 'Information Technology', year: '3rd year', events: 8 },
-      { name: 'Kabir Khan', email: 'kabir.khan@college.edu', enroll: '0827EC231007', branch: 'Electronics', year: '3rd year', events: 6 },
-      { name: 'Tanvi Shah', email: 'tanvi.shah@college.edu', enroll: '0827CS241033', branch: 'CSIT', year: '3rd year', events: 7 },
-      { name: 'Arjun Reddy', email: 'arjun.reddy@college.edu', enroll: '0827CS231018', branch: 'Computer Science', year: '3rd year', events: 10 },
-      { name: 'Pooja Nair', email: 'pooja.nair@college.edu', enroll: '0827IT221009', branch: 'Information Technology', year: '4th year', events: 11 },
-      { name: 'Ananya Rao', email: 'ananya.rao@college.edu', enroll: '0827CS231045', branch: 'CSIT', year: '3rd year', events: 5 },
-      { name: 'Vikram Singh', email: 'vikram.singh@college.edu', enroll: '0827ME241012', branch: 'Mechanical', year: '2nd year', events: 3 },
-      { name: 'Meera Iyer', email: 'meera.iyer@college.edu', enroll: '0827CS241058', branch: 'Computer Science', year: '2nd year', events: 4 },
-      { name: 'Rohan Gupta', email: 'rohan.gupta@college.edu', enroll: '0827CE231003', branch: 'Civil', year: '3rd year', events: 2 },
-      { name: 'Isha Malhotra', email: 'isha.malhotra@college.edu', enroll: '0827IT241027', branch: 'Information Technology', year: '2nd year', events: 4 },
-      { name: 'Dev Patel', email: 'dev.patel@college.edu', enroll: '0827EC221031', branch: 'Electronics', year: '4th year', events: 9 },
-      { name: 'Karan Mehta', email: 'karan.mehta@college.edu', enroll: '0827CS251002', branch: 'CSIT', year: '1st year', events: 1 }
-    ];
-    let VOLS = [
-      { email: 'aman.joshi@college.edu', on: true, scans: 312, added: '12 Sep 2026' },
-      { email: 'sneha.patil@college.edu', on: true, scans: 287, added: '12 Sep 2026' },
-      { email: 'kabir.khan@college.edu', on: true, scans: 41, added: '14 Sep 2026' },
-      { email: 'tanvi.shah@college.edu', on: false, scans: 198, added: '21 Sep 2026' },
-      { email: 'arjun.reddy@college.edu', on: false, scans: 156, added: '22 Sep 2026' },
-      { email: 'pooja.nair@college.edu', on: false, scans: 132, added: '28 Sep 2026' }
-    ];
+    const USERS = [];
+    let VOLS = [];
     const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const ini = n => n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
     const byEmail = e => USERS.find(u => u.email === e);
@@ -321,17 +299,46 @@ function init() {
 
     const say = (t, c) => { fmsg.textContent = t; fmsg.className = 'msg' + (c ? ' ' + c : '') };
 
+
     function stats() {
-      $('#st-assigned').textContent = VOLS.length;
-      $('#st-duty').textContent = VOLS.filter(v => v.on).length;
-      $('#st-scans').textContent = VOLS.reduce((a, v) => a + v.scans, 0).toLocaleString('en-IN');
-      $('#vcount').textContent = VOLS.length + (VOLS.length === 1 ? ' volunteer' : ' volunteers');
+      const assigned = $('#st-assigned');
+      const duty = $('#st-duty');
+      const scans = $('#st-scans');
+      const count = $('#vcount');
+
+      if (assigned) {
+        assigned.textContent = VOLS.length;
+      }
+
+      if (duty) {
+        duty.textContent = VOLS.filter(v => v.on).length;
+      }
+
+      if (scans) {
+        scans.textContent = VOLS
+          .reduce((total, v) => total + (Number(v.scans) || 0), 0)
+          .toLocaleString('en-IN');
+      }
+
+      if (count) {
+        count.textContent = VOLS.length +
+          (VOLS.length === 1 ? ' volunteer' : ' volunteers');
+      }
     }
+
     function table() {
       const f = $('#vf').value.trim().toLowerCase();
-      const rows = VOLS.filter(v => !f || (byEmail(v.email).name + ' ' + v.email).toLowerCase().includes(f));
+      const rows = VOLS.filter(v =>
+        !f || ((v.name || byEmail(v.email).name || "") + " " + v.email)
+          .toLowerCase()
+          .includes(f)
+      );
       $('#vbody').innerHTML = rows.length ? rows.map(v => {
-        const u = byEmail(v.email);
+        const u = {
+          ...byEmail(v.email),
+          ...v,
+          name: v.name || byEmail(v.email).name || "Unnamed user"
+        };
         return `<tr${v.email === justAdded ? ' class="new"' : ''}>
           <td><div class="who-cell"><span class="uav">${ini(u.name)}</span><div><b>${esc(u.name)}</b><div class="muted small">${esc(v.email)}</div></div></div></td>
           <td>${v.on ? '<span class="pill">On duty</span>' : '<span class="pill mute">Off duty</span>'}</td>
@@ -342,24 +349,127 @@ function init() {
         : `<tr><td colspan="5" class="empty-td">${VOLS.length ? 'No volunteer matches that filter.' : 'No volunteers yet. Assign one with the box above.'}</td></tr>`;
       justAdded = null;
     }
-    function find() {
-      const q = input.value.trim().toLowerCase(); res.innerHTML = '';
-      if (q.length < 3) { say('Type at least 3 characters of the registered email.', 'bad'); return }
-      const hits = USERS.filter(u => u.email.includes(q)).slice(0, 4);
-      if (!hits.length) { say('', ''); res.innerHTML = `<div class="ures none"><div><b>No registered user matches “${esc(input.value.trim())}”</b><div class="muted small">Check the spelling, or ask the student to sign up first. Only registered users can be assigned.</div></div></div>`; return }
-      say(hits.length + (hits.length === 1 ? ' registered user found.' : ' registered users found.'), 'ok');
-      res.innerHTML = hits.map(u => {
-        const v = VOLS.find(x => x.email === u.email);
-        return `<div class="ures"><span class="uav big">${ini(u.name)}</span>
-          <div class="grow"><b>${esc(u.name)}</b><div class="muted small">${esc(u.email)}</div>
-          <div class="muted small">${esc(u.enroll)} · ${esc(u.branch)}, ${u.year} · ${u.events} events registered</div></div>
-          ${v ? `<span class="pill">${icon('check', 14)} Already a volunteer</span>` : `<button class="btn primary sm" type="button" data-assign="${esc(u.email)}">Assign as volunteer</button>`}</div>`
-      }).join('');
+
+    async function loadVolunteers() {
+      try {
+        const response = await fetch("/admin/volunteers/list");
+
+        if (!response.ok) {
+          throw new Error("Failed to load volunteers.");
+        }
+
+        const data = await response.json();
+
+        if (!data.success) {
+          throw new Error(data.message || "Failed to load volunteers.");
+        }
+
+        VOLS = (data.volunteers || []).map(v => ({
+          ...v,
+          on: false,
+          scans: 0,
+          added: v.assigned_at
+            ? new Date(v.assigned_at).toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "short",
+              year: "numeric"
+            })
+            : "—"
+        }));
+
+        stats();
+        table();
+
+      } catch (error) {
+        console.error("Volunteer loading error:", error);
+        say(error.message, "bad");
+      }
     }
+
+    async function find() {
+      const email = input.value.trim();
+
+      res.innerHTML = "";
+
+      if (!email || !email.includes("@")) {
+        say("Enter the registered user's full email address.", "bad");
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `/admin/volunteers/search?email=${encodeURIComponent(email)}`
+        );
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          say(data.message || "No registered user found.", "bad");
+          return;
+        }
+
+        const user = data.user;
+
+        res.innerHTML = `
+            <div class="ures">
+                <div class="grow">
+                    <b>${esc(user.name || "Unnamed user")}</b>
+                    <div class="muted small">${esc(user.email)}</div>
+                    <div class="muted small">Role: ${esc(user.role)}</div>
+                </div>
+
+                ${user.already_assigned
+            ? '<span class="pill">Already a volunteer</span>'
+            : `<button
+                            class="btn primary sm"
+                            type="button"
+                            data-assign="${esc(user.email)}">
+                            Assign as volunteer
+                          </button>`
+          }
+            </div>
+        `;
+
+        say("Registered user found.", "ok");
+      } catch (error) {
+        console.error("User search error:", error);
+        say("Could not search users. Please try again.", "bad");
+      }
+    }
+
     function toast(msg, canUndo) {
-      $('#toast-msg').textContent = msg; $('#toast-undo').hidden = !canUndo; toastEl.hidden = false;
-      clearTimeout(timer); timer = setTimeout(() => { toastEl.hidden = true; if (canUndo) undo = null }, 7000);
+      const toastMessage = $('#toast-msg');
+      const undoButton = $('#toast-undo');
+
+      // If the toast elements don't exist, skip the notification.
+      if (!toastMessage) {
+        console.log(msg);
+        return;
+      }
+
+      toastMessage.textContent = msg;
+
+      if (undoButton) {
+        undoButton.hidden = !canUndo;
+      }
+
+      if (toastEl) {
+        toastEl.hidden = false;
+      }
+
+      clearTimeout(timer);
+
+      timer = setTimeout(() => {
+        if (toastEl) {
+          toastEl.hidden = true;
+        }
+
+        if (canUndo) {
+          undo = null;
+        }
+      }, 7000);
     }
+
     const closeModal = () => { modal.hidden = true; pending = null };
 
     $('#assign-form').addEventListener('submit', e => { e.preventDefault(); find() });
@@ -367,31 +477,141 @@ function init() {
     $('#vf').addEventListener('input', table);
     modal.addEventListener('click', e => { if (e.target === modal) closeModal() });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) closeModal() });
-    $('#m-cancel').addEventListener('click', closeModal);
+    const cancelButton = $('#m-cancel');
 
-    document.addEventListener('click', e => {
-      const a = e.target.closest('[data-assign]'), r = e.target.closest('[data-remove]');
+    if (cancelButton) {
+      cancelButton.addEventListener('click', closeModal);
+    }
+
+
+    document.addEventListener('click', async e => {
+      const a = e.target.closest('[data-assign]');
+      const r = e.target.closest('[data-remove]');
+
+      // ASSIGN VOLUNTEER
       if (a) {
-        const email = a.dataset.assign, u = byEmail(email);
-        VOLS.unshift({ email, on: false, scans: 0, added: '1 Oct 2026' }); justAdded = email;
-        input.value = ''; res.innerHTML = ''; say('', ''); stats(); table();
-        toast(u.name + ' is now a volunteer.'); return;
+        const email = a.dataset.assign;
+
+        a.disabled = true;
+
+        try {
+          const response = await fetch('/admin/volunteers/assign', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email })
+          });
+
+          const data = await response.json();
+
+          if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Could not assign volunteer.');
+          }
+
+          justAdded = email;
+
+          input.value = '';
+          res.innerHTML = '';
+          say('', '');
+
+          await loadVolunteers();
+
+          toast((data.volunteer?.name || email) + ' is now a volunteer.');
+
+        } catch (error) {
+          console.error('Assign volunteer error:', error);
+          say(error.message, 'bad');
+        } finally {
+          a.disabled = false;
+        }
+
+        return;
       }
+
+      // OPEN REMOVE CONFIRMATION
       if (r) {
-        pending = r.dataset.remove; const u = byEmail(pending);
-        $('#m-text').innerHTML = '<b>' + esc(u.name) + '</b> will lose scanner access right away. Their past scans stay in your records.';
-        modal.hidden = false; $('#m-cancel').focus(); return
+        pending = r.dataset.remove;
+
+        const volunteer = VOLS.find(v => v.email === pending);
+        const name = volunteer?.name || byEmail(pending).name || pending;
+
+        $('#m-text').innerHTML =
+          '<b>' + esc(name) + '</b> will lose scanner access right away. ' +
+          'Their past scans stay in your records.';
+
+        modal.hidden = false;
+
+        const cancelButton = $('#m-cancel');
+        if (cancelButton) {
+          cancelButton.focus();
+        }
+
+        return;
       }
-      if (e.target.closest('#m-confirm') && pending) {
-        const i = VOLS.findIndex(v => v.email === pending), u = byEmail(pending);
-        undo = { v: VOLS.splice(i, 1)[0], i }; closeModal(); stats(); table(); toast(u.name + ' was removed.', true); return
+
+
+      // CONFIRM REMOVE VOLUNTEER
+      if (e.target.closest('#confirm-remove') && pending) {
+        const email = pending;
+        const volunteer = VOLS.find(v => v.email === email);
+        console.log("Volunteer selected for removal:", volunteer);
+        console.log("Assignment ID:", volunteer?.assignment_id);
+
+        if (!volunteer) {
+          say('Volunteer not found. Please reload the list.', 'bad');
+          closeModal();
+          return;
+        }
+
+        // Use the database assignment ID, not the email.
+        if (!volunteer.assignment_id) {
+          say('Assignment ID is missing. Reload the volunteer list.', 'bad');
+          closeModal();
+          return;
+        }
+
+        const confirmButton = $('#confirm-remove');
+        confirmButton.disabled = true;
+
+        try {
+          const response = await fetch(
+            `/admin/volunteers/${volunteer.assignment_id}/remove`,
+            { method: 'DELETE' }
+          );
+
+          const data = await response.json();
+
+          if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Could not remove volunteer.');
+          }
+
+          closeModal();
+
+          await loadVolunteers();
+
+          toast(data.message || 'Volunteer access removed successfully.');
+
+        } catch (error) {
+          console.error('Remove volunteer error:', error);
+          say(error.message, 'bad');
+        } finally {
+          confirmButton.disabled = false;
+        }
+
+        return;
       }
-      if (e.target.closest('#toast-undo') && undo) {
-        VOLS.splice(undo.i, 0, undo.v); justAdded = undo.v.email; undo = null; toastEl.hidden = true; stats(); table()
+
+      // UNDO IS DISABLED FOR DATABASE REMOVALS.
+      // Restoring a removed assignment requires a new backend assignment request.
+      if (e.target.closest('#toast-undo')) {
+        undo = null;
+        toastEl.hidden = true;
       }
     });
 
-    stats(); table();
+
+    loadVolunteers();
   }
 
 

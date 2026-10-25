@@ -85,6 +85,18 @@
             Register for
             <span data-bind="t">{{ event.title }}</span>
         </h1>
+        <!-- Event registration notifications -->
+        <div class="flash-container" id="registration-flash-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+            <div class="flash-message flash-{{ category }}" role="alert">
+                <span>{{ message }}</span>
+                <button type="button" class="flash-close" aria-label="Close notification"
+                    onclick="this.parentElement.remove()">&times;</button>
+            </div>
+            {% endfor %}
+            {% endwith %}
+        </div>
 
         <!-- Stepper -->
         <div class="stepper" id="stepper" aria-label="Progress">
