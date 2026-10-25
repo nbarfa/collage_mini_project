@@ -43,7 +43,9 @@ events_bp = Blueprint(
 @events_bp.route("/", methods=["GET"])
 def home():
 
-    events = Event.query.order_by(
+    events = Event.query.filter(
+        Event.event_date >= date.today()
+    ).order_by(
         Event.event_date.asc(),
         Event.start_time.asc(),
     ).all()
@@ -59,7 +61,6 @@ def home():
         events=events,
         current_user=current_user,
     )
-
 
 # =========================================================
 # USER PROFILE

@@ -107,16 +107,27 @@ function showStep(n) {
 }
 
 /* ---------- admin helpers ---------- */
+/* ---------- admin helpers ---------- */
 function countUp(el) {
-  if (RM) return; const to = +el.dataset.count, t0 = performance.now();
-  const step = t => { const p = Math.min(1, (t - t0) / 1100), v = Math.round(to * (1 - Math.pow(1 - p, 3))); el.textContent = v.toLocaleString('en-IN'); if (p < 1) requestAnimationFrame(step) };
-  requestAnimationFrame(step);
-}
-const NAMES = ['Ananya Rao', 'Vikram Singh', 'Meera Iyer', 'Rohan Gupta', 'Isha Malhotra', 'Dev Patel', 'Pooja Nair', 'Karan Mehta', 'Tanvi Shah', 'Arjun Reddy'];
-let feedN = 5;
-function feedItem() {
-  const n = NAMES[feedN++ % NAMES.length], dup = feedN % 6 === 0;
-  return `<li class="new"><span class="av">${n.split(' ').map(x => x[0]).join('')}</span><span class="nm"><b>${n}</b><small>Just now</small></span><span class="pill${dup ? ' warn' : ''}">${dup ? 'Already used' : 'Valid'}</span></li>`;
+    if (!el) return;
+
+    const to = +el.dataset.count;
+    const t0 = performance.now();
+
+    const step = t => {
+        const p = Math.min(1, (t - t0) / 1100);
+        const v = Math.round(
+            to * (1 - Math.pow(1 - p, 3))
+        );
+
+        el.textContent = v.toLocaleString("en-IN");
+
+        if (p < 1) {
+            requestAnimationFrame(step);
+        }
+    };
+
+    requestAnimationFrame(step);
 }
 
 /* ---------- start ---------- */
@@ -1607,8 +1618,7 @@ function init() {
 
   if (page === 'admin') {
     $$('[data-count]').forEach(countUp);
-    setInterval(() => { const f = $('#feed'); f.insertAdjacentHTML('afterbegin', feedItem()); while (f.children.length > 5) f.lastElementChild.remove() }, 3400);
-  }
+}
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 

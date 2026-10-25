@@ -1,5 +1,6 @@
-from datetime import datetime
+from datetime import datetime, date, time, timedelta
 import token
+from sqlalchemy import func
 from models.registration import Registration
 
 from flask import (
@@ -87,12 +88,109 @@ def dashboard():
         Event.event_date.asc()
     ).all()
 
+    # Total registrations across all events
+    total_registrations = db.session.query(
+        func.count(Registration.id)
+    ).scalar() or 0
+
+    # Count check-ins recorded today
+    today = date.today()
+    start_of_day = datetime.combine(today, time.min)
+    start_of_tomorrow = start_of_day + timedelta(days=1)
+
+    checked_in_today = Checkin.query.filter(
+        Checkin.checked_in_at >= start_of_day,
+        Checkin.checked_in_at < start_of_tomorrow,
+    ).count()
+
+    # Registration activity for the last 7 days
+    start_date = today - timedelta(days=6)
+    start_datetime = datetime.combine(start_date, time.min)
+
+    registrations = Registration.query.filter(
+        Registration.registered_at >= start_datetime,
+        Registration.registered_at < start_of_tomorrow,
+    ).all()
+
+    # Initialize each day with zero registrations
+    daily_counts = {
+        (start_date + timedelta(days=i)).isoformat(): 0
+        for i in range(7)
+    }
+
+    # Count registrations for each day
+    for registration in registrations:
+        registration_date = (
+            registration.registered_at.date().isoformat()
+        )
+
+        if registration_date in daily_counts:
+            daily_counts[registration_date] += 1
+
+    # Prepare chart labels and values
+    registration_labels = [
+        datetime.strptime(day, "%Y-%m-%d").strftime("%d %b")
+        for day in daily_counts
+    ]
+
+    registration_counts = list(daily_counts.values())
+
+    # Get the 5 most recent check-ins with student names
+    recent_checkins_query = (
+        db.session.query(Checkin, User.name)
+        .join(
+            Registration,
+            Checkin.registration_id == Registration.id
+        )
+        .join(
+            User,
+            Registration.user_id == User.id
+        )
+        .order_by(Checkin.checked_in_at.desc())
+        .limit(5)
+        .all()
+    )
+
+    recent_checkins = [
+        {
+            "student_name": student_name,
+            "checked_in_at": checkin.checked_in_at.strftime(
+                "%d %b, %I:%M %p"
+            ),
+        }
+        for checkin, student_name in recent_checkins_query
+    ]
+
+    # Get volunteer assignments from the database
+    assignments = (
+        VolunteerAssignment.query
+        .order_by(VolunteerAssignment.assigned_at.desc())
+        .all()
+    )
+
+    volunteer_assignments = [
+        {
+            "volunteer_name": assignment.user.name,
+            "duty_details": (
+                "Assigned on "
+                + assignment.assigned_at.strftime("%d %b %Y")
+            ),
+        }
+        for assignment in assignments
+        if assignment.user is not None
+    ]
+
     return render_template(
         "admin/dashboard.html",
         events=events,
         current_user=current_user,
+        total_registrations=total_registrations,
+        checked_in_today=checked_in_today,
+        registration_labels=registration_labels,
+        registration_counts=registration_counts,
+        recent_checkins=recent_checkins,
+        volunteer_assignments=volunteer_assignments,
     )
-
 
 # =========================================================
 # CREATE EVENT
