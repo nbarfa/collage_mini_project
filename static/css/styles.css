@@ -447,3 +447,119 @@ tr.new td{animation:rowin 1.8s ease}
 .vd-demo code{font-weight:700;color:var(--ink)}
 .vd .feed{padding:0}
 @media (max-width:340px){.vd .facts{grid-template-columns:1fr}}
+
+
+/* Frontend notification messages */
+.flash-container {
+    width: 100%;
+    margin-bottom: 18px;
+}
+
+.flash-message {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 15px;
+    margin-bottom: 10px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.flash-success {
+    color: #bbf7d0;
+    background: rgba(22, 163, 74, 0.15);
+    border-color: rgba(74, 222, 128, 0.35);
+}
+
+.flash-error {
+    color: #fecaca;
+    background: rgba(220, 38, 38, 0.15);
+    border-color: rgba(248, 113, 113, 0.35);
+}
+
+.flash-info {
+    color: #bfdbfe;
+    background: rgba(37, 99, 235, 0.15);
+    border-color: rgba(96, 165, 250, 0.35);
+}
+
+.flash-warning {
+    color: #fde68a;
+    background: rgba(217, 119, 6, 0.15);
+    border-color: rgba(251, 191, 36, 0.35);
+}
+
+.flash-close {
+    flex-shrink: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+
+
+/* Signup page layout fix */
+body[data-page="signup"] .auth-form {
+    display: block;
+    padding: 32px clamp(24px, 5vw, 56px);
+}
+
+body[data-page="signup"] .auth-form .fbox {
+    width: min(440px, 100%);
+    margin: 0 auto;
+}
+body[data-page="signup"] .auth-form {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 32px 24px;
+}
+
+body[data-page="signup"] .auth-form .fbox {
+    width: min(440px, 100%);
+    margin: 0 auto;
+}
+
+
+/* Keep the signup form usable on shorter screens */
+@media (min-width: 769px) {
+    body[data-page="signup"] .auth-form {
+        padding: 20px 32px;
+        align-items: center;
+    }
+
+    body[data-page="signup"] .auth-form .fbox {
+        width: min(440px, 100%);
+    }
+
+    body[data-page="signup"] .auth-form h1 {
+        font-size: clamp(2rem, 3.2vw, 3rem);
+        line-height: 1.05;
+        margin-top: 0;
+        margin-bottom: 10px;
+    }
+
+    body[data-page="signup"] .auth-form .sub {
+        margin-top: 8px;
+        margin-bottom: 16px;
+    }
+
+    body[data-page="signup"] .auth-form .form {
+        gap: 12px;
+    }
+
+    body[data-page="signup"] .auth-form .field {
+        gap: 5px;
+    }
+
+    body[data-page="signup"] .auth-form .foot {
+        margin-top: 14px;
+    }
+}

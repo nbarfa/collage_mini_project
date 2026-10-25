@@ -171,8 +171,119 @@ function init() {
       $$('.strength i').forEach((i, k) => i.classList.toggle('on', k < s));
       $('#pwh').textContent = ['Use 8+ characters with a number and a symbol.', 'Weak: add more characters.', 'Fair: add a number.', 'Good: add a symbol.', 'Strong password.'][s];
     });
-    /* Demo only: replace with a POST to your sign-up endpoint. */
-    $('#signup-form').addEventListener('submit', e => { e.preventDefault(); location.href = 'home.html' });
+    $('#signup-form').addEventListener('submit', async e => {
+      e.preventDefault();
+
+      const form = e.currentTarget;
+      const button = form.querySelector('button[type="submit"]');
+
+      const name = form.querySelector('[name="name"]').value.trim();
+      const email = form.querySelector('[name="email"]').value.trim();
+      const password = form.querySelector('[name="password"]').value;
+      const branch = form.querySelector('[name="branch"]')?.value.trim() || '';
+      const year = form.querySelector('[name="year"]')?.value || '';
+      const enrollmentNumber =
+        form.querySelector('[name="enrollment_number"]')?.value.trim() || '';
+
+      // Display signup errors inside the signup page.
+      function showSignupError(message) {
+        let container = document.querySelector('#signup-message');
+
+        if (!container) {
+          container = document.createElement('div');
+          container.id = 'signup-message';
+          container.className = 'flash-container';
+
+          const heading = form.querySelector('h1');
+          if (heading) {
+            heading.insertAdjacentElement('afterend', container);
+          } else {
+            form.prepend(container);
+          }
+        }
+
+        container.replaceChildren();
+
+        const box = document.createElement('div');
+        box.className = 'flash-message flash-error';
+        box.setAttribute('role', 'alert');
+
+        const text = document.createElement('span');
+        text.textContent = message;
+
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'flash-close';
+        close.setAttribute('aria-label', 'Close notification');
+        close.textContent = '×';
+        close.addEventListener('click', () => box.remove());
+
+        box.append(text, close);
+        container.appendChild(box);
+      }
+
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'Creating account...';
+      }
+
+      try {
+        const response = await fetch('/auth/signup', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            name,
+            email,
+            password,
+            role: 'student',
+            branch,
+            year,
+            enrollment_number: enrollmentNumber
+          })
+        });
+
+        const data = await response.json();
+
+        // Registered email: redirect to login with an error message.
+        if (
+          response.status === 409 &&
+          data.error &&
+          data.error.toLowerCase().includes('email already exists')
+        ) {
+          window.location.href =
+            `/auth/login?signup_error=${encodeURIComponent(data.error)}`;
+          return;
+        }
+
+        // Any other error stays on the signup page.
+        if (!response.ok) {
+          showSignupError(data.error || 'Unable to create account.');
+          return;
+        }
+
+        // Successful signup: redirect to login with a success message.
+        window.location.href =
+          `/auth/login?signup_message=${encodeURIComponent(data.message || 'Account created successfully. Please log in.')}`;
+
+      } catch (error) {
+        showSignupError(
+          'Unable to connect to the server. Please try again.'
+        );
+
+        console.error('Signup error:', error);
+
+      } finally {
+        if (button && document.body.dataset.page === 'signup') {
+          button.disabled = false;
+          button.textContent = 'Create account';
+        }
+      }
+    });
+
   }
 
   if (page === 'volunteers') {
@@ -778,55 +889,96 @@ function init() {
       if (r.length > 5) r.pop();
       drawRecent();
     }
-    function check(raw) {
-      const id = String(raw).trim().toUpperCase(),
-        st = ensureEventState(sc.id);
-      if (!id) {
+    async function check(raw) {
+      const token = String(raw || "").trim();
+
+      if (!token) {
         result(
-          'bad',
-          'Enter a ticket ID',
-          '',
-          'Type the ID printed under the QR code.',
+          "bad",
+          "Enter a ticket ID",
+          "",
+          "Enter the actual QR token from the ticket."
         );
         return;
       }
-      const t = TICKETS.find((x) => x.id === id);
-      if (!t) {
+
+      if (!sc || !Number.isInteger(Number(sc.id))) {
         result(
-          'bad',
-          'Ticket not valid',
-          '',
-          'This code is not an Admit ticket.',
+          "bad",
+          "No event selected",
+          "",
+          "Select an event before checking a ticket."
         );
-        log('Unknown ticket', id, 'bad', 'Not valid');
         return;
       }
-      if (t.event !== sc.id) {
-        result(
-          'bad',
-          'Wrong event',
-          t.name,
-          'This ticket is for ' + byId(t.event).t + '.',
+
+      try {
+        const response = await fetch(
+          `/admin/volunteer/events/${Number(sc.id)}/scan`,
+          {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            body: JSON.stringify({ token })
+          }
         );
-        log(t.name, t.enroll, 'bad', 'Wrong event');
-        return;
-      }
-      if (st.used[t.id]) {
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          const messages = {
+            invalid_ticket: "Invalid Ticket",
+            already_scanned: "QR Already Scanned",
+            wrong_event: "Ticket belongs to another event",
+            event_finished: "This event has already passed",
+            unauthorized: "Please log in again",
+            forbidden: "Volunteer access is required",
+            event_not_found: "Event not found",
+            missing_token: "Enter a ticket ID"
+          };
+
+          const message =
+            messages[data.code] ||
+            data.message ||
+            "Unable to validate ticket.";
+
+          result(
+            data.code === "already_scanned" ? "warn" : "bad",
+            message,
+            "",
+            data.message || "The server could not validate this ticket."
+          );
+
+          return;
+        }
+
+        const student = data.student || {};
+
         result(
-          'warn',
-          'Already checked in',
-          t.name,
-          t.enroll + ' · scanned at ' + st.used[t.id],
+          "ok",
+          "Confirmed",
+          student.name || "Student",
+          [
+            student.enrollment_number || "",
+            student.branch || "",
+            student.year || "",
+            data.event?.title || sc.t
+          ].filter(Boolean).join(" · ")
         );
-        log(t.name, t.enroll, 'warn', 'Already used');
-        return;
+
+      } catch (error) {
+        console.error("Manual ticket validation failed:", error);
+
+        result(
+          "bad",
+          "Connection error",
+          "",
+          "Could not contact the server. Check your connection and try again."
+        );
       }
-      clock++;
-      st.used[t.id] = clk();
-      sc.in++;
-      count();
-      result('ok', 'Entry allowed', t.name, t.enroll + ' · ' + sc.t);
-      log(t.name, t.enroll, 'ok', 'Valid');
     }
 
 

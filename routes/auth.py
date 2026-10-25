@@ -62,12 +62,25 @@ def signup():
 
     is_json_request = request.is_json
 
+    # Handle signup errors
     def signup_error(message, status_code=400):
 
         if is_json_request:
-            return jsonify({"error": message}), status_code
+            response = {"error": message}
+
+            # Redirect to login only for an already-registered email
+            if "email already exists" in message.lower():
+                response["redirect_url"] = url_for("auth.login")
+
+            return jsonify(response), status_code
 
         flash(message, "error")
+
+        # Redirect to login only for an already-registered email
+        if "email already exists" in message.lower():
+            return redirect(url_for("auth.login"))
+
+        # All other errors stay on the signup page
         return redirect(url_for("auth.signup"))
 
     # Required fields
@@ -160,11 +173,11 @@ def signup():
             500,
         )
 
-    # JSON response for API clients
+    # Successful signup
     if is_json_request:
         return jsonify({
-            "message": "Account created",
-            "user": user.to_dict(),
+            "message": "Account created successfully. Please log in.",
+            "redirect_url": url_for("auth.login"),
         }), 201
 
     flash(
@@ -175,6 +188,7 @@ def signup():
     return redirect(url_for("auth.login"))
 
 
+
 # =========================================================
 # LOGIN
 # =========================================================
@@ -182,30 +196,34 @@ def signup():
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
 
-    # Display login page
+    # Check whether the user is already logged in.
+    user_id = session.get("user_id")
+
+    if user_id:
+        user = db.session.get(User, user_id)
+
+        if user:
+            # Handle JSON requests.
+            if request.is_json:
+                return jsonify({
+                    "message": "You are already logged in.",
+                    "user": user.to_dict(),
+                }), 200
+
+            # Redirect HTML requests to the appropriate dashboard.
+            if user.role == "admin":
+                return redirect(url_for("admin.dashboard"))
+
+            return redirect(url_for("events.home"))
+
+        # Clear an invalid or stale session.
+        session.clear()
+
+    # Display login page.
     if request.method == "GET":
-
-        user_id = session.get("user_id")
-
-        if user_id:
-            user = db.session.get(User, user_id)
-
-            if user:
-                if user.role == "admin":
-                    return redirect(
-                        url_for("admin.dashboard")
-                    )
-
-                return redirect(
-                    url_for("events.home")
-                )
-
-            # Clear a stale session
-            session.clear()
-
         return render_template("login.html")
 
-    # Support JSON requests and HTML forms
+    # Support JSON requests and HTML forms.
     if request.is_json:
         data = request.get_json(silent=True) or {}
     else:
@@ -217,36 +235,33 @@ def login():
     if not isinstance(password, str):
         password = ""
 
+    # Validate required fields.
     if not email or not password:
-        error_message = "Email and password are required"
+        error_message = "Email and password are required."
 
         if request.is_json:
-            return jsonify({
-                "error": error_message
-            }), 400
+            return jsonify({"error": error_message}), 400
 
         flash(error_message, "error")
         return redirect(url_for("auth.login"))
 
-    # Find account
+    # Find account.
     user = User.query.filter_by(email=email).first()
 
-    # Verify password
+    # Verify password.
     if not user or not bcrypt.check_password_hash(
         user.password_hash,
         password,
     ):
-        error_message = "Invalid email or password"
+        error_message = "Invalid email or password."
 
         if request.is_json:
-            return jsonify({
-                "error": error_message
-            }), 401
+            return jsonify({"error": error_message}), 401
 
         flash(error_message, "error")
         return redirect(url_for("auth.login"))
 
-    # Create JWT access token
+    # Create JWT access token.
     access_token = create_access_token(
         identity=str(user.id),
         additional_claims={
@@ -255,24 +270,24 @@ def login():
         },
     )
 
-    # Store login information in Flask session
+    # Store login information in Flask session.
     session.clear()
     session["user_id"] = user.id
     session["user_name"] = user.name
     session["user_role"] = user.role
     session["access_token"] = access_token
 
-    # JSON response for API clients
+    # JSON response for API clients.
     if request.is_json:
         return jsonify({
+            "message": "Login successful.",
             "access_token": access_token,
             "user": user.to_dict(),
         }), 200
 
     flash("Login successful.", "success")
 
-    # Redirect to the originally requested local path,
-    # if one was supplied. Avoid external redirect URLs.
+    # Redirect to the originally requested local path.
     next_url = (
         request.form.get("next")
         or request.args.get("next")
@@ -286,22 +301,43 @@ def login():
     ):
         return redirect(next_url)
 
-    # Default redirects based on role
+    # Default redirects based on role.
     if user.role == "admin":
         return redirect(url_for("admin.dashboard"))
 
     return redirect(url_for("events.home"))
 
 
+
 # =========================================================
 # LOGOUT
 # =========================================================
 
-@auth_bp.route("/logout")
+@auth_bp.route("/logout", methods=["GET", "POST"])
 def logout():
+
+    user_id = session.get("user_id")
+
+    # Handle JSON requests.
+    if request.is_json:
+        if not user_id:
+            return jsonify({
+                "message": "You are already logged out."
+            }), 200
+
+        session.clear()
+
+        return jsonify({
+            "message": "You have been logged out successfully."
+        }), 200
+
+    # Handle HTML requests.
+    if not user_id:
+        flash("You are already logged out.", "info")
+        return redirect(url_for("auth.login"))
 
     session.clear()
 
-    flash("You have been logged out.", "success")
+    flash("You have been logged out successfully.", "success")
 
     return redirect(url_for("auth.login"))

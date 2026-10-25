@@ -1,4 +1,5 @@
 from datetime import datetime
+import token
 from models.registration import Registration
 
 from flask import (
@@ -971,9 +972,17 @@ def volunteer_scan_ticket(event_id):
         }), 400
 
     # 5. Find the registration associated with this QR token.
-    registration = Registration.query.filter_by(
-        qr_token=token
-    ).first()
+    registration = Registration.query.filter_by(qr_token=token).first()
+
+    # If the input is not a QR token, check whether it is a printed ticket ID.
+    if not registration and token.startswith("UG-"):
+        ticket_number = token[3:]
+
+        if ticket_number.isdigit():
+            registration = db.session.get(
+                Registration,
+                int(ticket_number)
+            )
 
     if not registration:
         return jsonify({

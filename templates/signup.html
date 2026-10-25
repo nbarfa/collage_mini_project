@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -10,11 +11,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap"
-        rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap"
+    rel="stylesheet">
 
-  <link rel="stylesheet"
-        href="{{ url_for('static', filename='css/styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 
   <style>
     .project-brand {
@@ -102,145 +103,128 @@
     </aside>
 
     <!-- RIGHT SIDE: SIGNUP FORM -->
+
     <div class="auth-form">
       <div class="fbox">
 
-        <h1>Create your account</h1>
+      <!-- FLASH NOTIFICATIONS -->
+      <div class="flash-container" id="flash-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+        <div class="flash-message flash-{{ category }}" role="alert">
+          <span>{{ message }}</span>
+          <button type="button" class="flash-close" aria-label="Close notification"
+            onclick="this.parentElement.remove()">&times;</button>
+        </div>
+        {% endfor %}
+        {% endwith %}
+      </div>
 
-        <p class="sub">
-          It takes about a minute. You only do this once.
-        </p>
+      <h1>Create your account</h1>
 
-        <form
-          class="form"
-          id="signup-form"
-          action="{{ url_for('auth.signup') }}"
-          method="POST"
-        >
 
-          <!-- FULL NAME -->
+      <p class="sub">
+        It takes about a minute. You only do this once.
+      </p>
+
+      <form class="form" id="signup-form" action="{{ url_for('auth.signup') }}" method="POST">
+
+        <!-- FULL NAME -->
+        <div class="field">
+          <label for="n">Full name</label>
+
+          <input class="inp" id="n" name="name" type="text" placeholder="As on your college ID" autocomplete="name"
+            required>
+        </div>
+
+        <!-- ENROLLMENT NUMBER AND YEAR -->
+        <div class="row2">
+
           <div class="field">
-            <label for="n">Full name</label>
+            <label for="en">Enrollment number</label>
 
-            <input
-              class="inp"
-              id="n"
-              name="name"
-              type="text"
-              placeholder="As on your college ID"
-              autocomplete="name"
-              required
-            >
+            <input class="inp" id="en" name="enrollment_number" type="text" placeholder="Your enrollment number"
+              required>
           </div>
 
-          <!-- ENROLLMENT NUMBER AND YEAR -->
-          <div class="row2">
-
-            <div class="field">
-              <label for="en">Enrollment number</label>
-
-              <input
-                class="inp"
-                id="en"
-                name="enrollment_number"
-                type="text"
-                placeholder="Your enrollment number"
-                required
-              >
-            </div>
-
-            <div class="field">
-              <label for="yr">Year</label>
-
-              <select class="inp" id="yr" name="year" required>
-                <option value="1">1st year</option>
-                <option value="2">2nd year</option>
-                <option value="3" selected>3rd year</option>
-                <option value="4">4th year</option>
-              </select>
-            </div>
-
-          </div>
-
-          <!-- BRANCH -->
           <div class="field">
-            <label for="br">Branch</label>
+            <label for="yr">Year</label>
 
-            <select class="inp" id="br" name="branch" required>
-              <option value="CSIT" selected>CSIT</option>
-              <option value="Computer Science">Computer Science</option>
-              <option value="Information Technology">Information Technology</option>
-              <option value="Electronics">Electronics</option>
-              <option value="Mechanical">Mechanical</option>
-              <option value="Civil">Civil</option>
+            <select class="inp" id="yr" name="year" required>
+              <option value="1">1st year</option>
+              <option value="2">2nd year</option>
+              <option value="3" selected>3rd year</option>
+              <option value="4">4th year</option>
             </select>
           </div>
 
-          <!-- COLLEGE EMAIL -->
-          <div class="field">
-            <label for="em">College email</label>
+        </div>
 
-            <input
-              class="inp"
-              id="em"
-              name="email"
-              type="email"
-              placeholder="you@college.edu"
-              autocomplete="email"
-              required
-            >
+        <!-- BRANCH -->
+        <div class="field">
+          <label for="br">Branch</label>
+
+          <select class="inp" id="br" name="branch" required>
+            <option value="CSIT" selected>CSIT</option>
+            <option value="Computer Science">Computer Science</option>
+            <option value="Information Technology">Information Technology</option>
+            <option value="Electronics">Electronics</option>
+            <option value="Mechanical">Mechanical</option>
+            <option value="Civil">Civil</option>
+          </select>
+        </div>
+
+        <!-- COLLEGE EMAIL -->
+        <div class="field">
+          <label for="em">College email</label>
+
+          <input class="inp" id="em" name="email" type="email" placeholder="you@college.edu" autocomplete="email"
+            required>
+        </div>
+
+        <!-- PASSWORD -->
+        <div class="field">
+          <label for="pw">Password</label>
+
+          <div class="pwrow">
+            <input class="inp" id="pw" name="password" type="password" placeholder="At least 8 characters"
+              autocomplete="new-password" minlength="8" required>
+
+            <button type="button" data-pw>Show</button>
           </div>
 
-          <!-- PASSWORD -->
-          <div class="field">
-            <label for="pw">Password</label>
-
-            <div class="pwrow">
-              <input
-                class="inp"
-                id="pw"
-                name="password"
-                type="password"
-                placeholder="At least 8 characters"
-                autocomplete="new-password"
-                minlength="8"
-                required
-              >
-
-              <button type="button" data-pw>Show</button>
-            </div>
-
-            <div class="strength" aria-hidden="true">
-              <i></i>
-              <i></i>
-              <i></i>
-              <i></i>
-            </div>
-
-            <small class="muted" id="pwh">
-              Use 8+ characters with a number and a symbol.
-            </small>
+          <div class="strength" aria-hidden="true">
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
           </div>
 
-          <!-- SUBMIT -->
-          <button class="btn primary wide" type="submit">
-            Create account
-          </button>
+          <small class="muted" id="pwh">
+            Use 8+ characters with a number and a symbol.
+          </small>
+        </div>
 
-        </form>
+        <!-- SUBMIT -->
+        <button class="btn primary wide" type="submit">
+          Create account
+        </button>
 
-        <p class="foot">
-          Already registered?
-          <a class="lnk" href="{{ url_for('auth.login') }}">
-            Sign in
-          </a>
-        </p>
+      </form>
 
-      </div>
+      <p class="foot">
+        Already registered?
+        <a class="lnk" href="{{ url_for('auth.login') }}">
+          Sign in
+        </a>
+      </p>
+
     </div>
+  </div>
 
   </section>
 
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
+
 </html>
