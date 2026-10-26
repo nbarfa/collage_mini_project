@@ -7,6 +7,7 @@ from flask import (
     url_for,
     session,
     flash,
+    current_app,
 )
 
 from flask_jwt_extended import create_access_token
@@ -14,6 +15,8 @@ from flask_jwt_extended import create_access_token
 from database.db import db, bcrypt
 from models.user import User
 from utils.validators import is_college_email
+from utils.email_service import send_verification_email
+from utils.email_verification import verify_verification_token
 
 
 auth_bp = Blueprint(
@@ -30,11 +33,9 @@ auth_bp = Blueprint(
 @auth_bp.route("/signup", methods=["GET", "POST"])
 def signup():
 
-    # Display signup page
     if request.method == "GET":
         return render_template("signup.html")
 
-    # Support JSON requests and HTML forms
     if request.is_json:
         data = request.get_json(silent=True) or {}
     else:
@@ -53,7 +54,6 @@ def signup():
         or None
     )
 
-    # Validate input types
     if not isinstance(password, str):
         password = ""
 
@@ -62,13 +62,11 @@ def signup():
 
     is_json_request = request.is_json
 
-    # Handle signup errors
     def signup_error(message, status_code=400):
 
         if is_json_request:
             response = {"error": message}
 
-            # Redirect to login only for an already-registered email
             if "email already exists" in message.lower():
                 response["redirect_url"] = url_for("auth.login")
 
@@ -76,20 +74,18 @@ def signup():
 
         flash(message, "error")
 
-        # Redirect to login only for an already-registered email
         if "email already exists" in message.lower():
             return redirect(url_for("auth.login"))
 
-        # All other errors stay on the signup page
         return redirect(url_for("auth.signup"))
 
-    # Required fields
+    # Validate required fields
     if not name or not email or not password:
         return signup_error(
             "Name, email and password are required"
         )
 
-    # Prevent public signup as an admin
+    # Prevent public admin signup
     if role not in ("student", "volunteer"):
         return signup_error("Invalid role for signup")
 
@@ -118,19 +114,18 @@ def signup():
             year = None
 
     else:
-        # Volunteer accounts do not use student-only fields
         branch = None
         year = None
         enrollment_number = None
 
-    # Check for duplicate email
+    # Check duplicate email
     if User.query.filter_by(email=email).first():
         return signup_error(
             "An account with this email already exists",
             409,
         )
 
-    # Check for duplicate enrollment number
+    # Check duplicate enrollment number
     if enrollment_number:
         existing_enrollment = User.query.filter_by(
             enrollment_number=enrollment_number
@@ -142,22 +137,22 @@ def signup():
                 409,
             )
 
-    # Hash password before storing it
+    # Hash password
     password_hash = bcrypt.generate_password_hash(
         password
     ).decode("utf-8")
 
+    # Create an unverified account
     user = User(
         name=name,
         email=email,
         password_hash=password_hash,
         role=role,
+        is_email_verified=False,
         branch=branch if role == "student" else None,
         year=year if role == "student" else None,
         enrollment_number=(
-            enrollment_number
-            if role == "student"
-            else None
+            enrollment_number if role == "student" else None
         ),
     )
 
@@ -167,26 +162,121 @@ def signup():
 
     except Exception:
         db.session.rollback()
+        current_app.logger.exception("Account creation failed")
 
         return signup_error(
             "Unable to create the account. Please try again.",
             500,
         )
 
-    # Successful signup
+    # Send verification email after saving the account
+    try:
+        send_verification_email(user)
+
+    except Exception:
+        current_app.logger.exception(
+            "Failed to send verification email to %s",
+            user.email,
+        )
+
+        message = (
+            "Your account was created, but the verification email "
+            "could not be sent. Please try again later."
+        )
+
+        if is_json_request:
+            return jsonify({"message": message}), 500
+
+        flash(message, "error")
+        return redirect(url_for("auth.login"))
+
+    # Signup success
+    message = (
+        "Account created successfully. "
+        "Please check your email to verify your account."
+    )
+
     if is_json_request:
         return jsonify({
-            "message": "Account created successfully. Please log in.",
+            "message": message,
             "redirect_url": url_for("auth.login"),
         }), 201
 
-    flash(
-        "Account created successfully. Please log in.",
-        "success",
-    )
-
+    flash(message, "success")
     return redirect(url_for("auth.login"))
 
+
+# =========================================================
+# EMAIL VERIFICATION
+# =========================================================
+
+@auth_bp.route("/verify-email/<token>", methods=["GET"])
+def verify_email(token):
+
+    email = verify_verification_token(token)
+
+    if not email:
+        message = (
+            "This verification link is invalid or has expired. "
+            "Please request a new verification email."
+        )
+
+        if request.is_json:
+            return jsonify({"error": message}), 400
+
+        flash(message, "error")
+        return redirect(url_for("auth.login"))
+
+    user = User.query.filter_by(email=email).first()
+
+    if not user:
+        message = "No account was found for this verification link."
+
+        if request.is_json:
+            return jsonify({"error": message}), 404
+
+        flash(message, "error")
+        return redirect(url_for("auth.signup"))
+
+    if user.is_email_verified:
+        message = "Your email address is already verified."
+
+        if request.is_json:
+            return jsonify({"message": message}), 200
+
+        flash(message, "info")
+        return redirect(url_for("auth.login"))
+
+    user.is_email_verified = True
+
+    try:
+        db.session.commit()
+
+    except Exception:
+        db.session.rollback()
+
+        current_app.logger.exception(
+            "Failed to verify email for %s",
+            email,
+        )
+
+        message = (
+            "Unable to verify your email right now. Please try again."
+        )
+
+        if request.is_json:
+            return jsonify({"error": message}), 500
+
+        flash(message, "error")
+        return redirect(url_for("auth.login"))
+
+    message = "Email verified successfully. You can now log in."
+
+    if request.is_json:
+        return jsonify({"message": message}), 200
+
+    flash(message, "success")
+    return redirect(url_for("auth.login"))
 
 
 # =========================================================
@@ -196,34 +286,39 @@ def signup():
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
 
-    # Check whether the user is already logged in.
+    # Check existing session
     user_id = session.get("user_id")
 
     if user_id:
         user = db.session.get(User, user_id)
 
         if user:
-            # Handle JSON requests.
-            if request.is_json:
-                return jsonify({
-                    "message": "You are already logged in.",
-                    "user": user.to_dict(),
-                }), 200
+            if (
+                user.role in ("student", "volunteer")
+                and not user.is_email_verified
+            ):
+                session.clear()
 
-            # Redirect HTML requests to the appropriate dashboard.
-            if user.role == "admin":
-                return redirect(url_for("admin.dashboard"))
+            else:
+                if request.is_json:
+                    return jsonify({
+                        "message": "You are already logged in.",
+                        "user": user.to_dict(),
+                    }), 200
 
-            return redirect(url_for("events.home"))
+                if user.role == "admin":
+                    return redirect(url_for("admin.dashboard"))
 
-        # Clear an invalid or stale session.
-        session.clear()
+                return redirect(url_for("events.home"))
 
-    # Display login page.
+        else:
+            session.clear()
+
+    # Display login page
     if request.method == "GET":
         return render_template("login.html")
 
-    # Support JSON requests and HTML forms.
+    # Parse request
     if request.is_json:
         data = request.get_json(silent=True) or {}
     else:
@@ -235,7 +330,7 @@ def login():
     if not isinstance(password, str):
         password = ""
 
-    # Validate required fields.
+    # Validate required fields
     if not email or not password:
         error_message = "Email and password are required."
 
@@ -245,10 +340,10 @@ def login():
         flash(error_message, "error")
         return redirect(url_for("auth.login"))
 
-    # Find account.
+    # Find user
     user = User.query.filter_by(email=email).first()
 
-    # Verify password.
+    # Verify password
     if not user or not bcrypt.check_password_hash(
         user.password_hash,
         password,
@@ -261,7 +356,23 @@ def login():
         flash(error_message, "error")
         return redirect(url_for("auth.login"))
 
-    # Create JWT access token.
+    # Require email verification for students and volunteers
+    if (
+        user.role in ("student", "volunteer")
+        and not user.is_email_verified
+    ):
+        error_message = (
+            "Please verify your email address before logging in. "
+            "Check your inbox for the verification link."
+        )
+
+        if request.is_json:
+            return jsonify({"error": error_message}), 403
+
+        flash(error_message, "error")
+        return redirect(url_for("auth.login"))
+
+    # Create JWT
     access_token = create_access_token(
         identity=str(user.id),
         additional_claims={
@@ -270,24 +381,21 @@ def login():
         },
     )
 
-    # Store login information in Flask session.
+    # Store session
     session.clear()
     session["user_id"] = user.id
     session["user_name"] = user.name
     session["user_role"] = user.role
     session["access_token"] = access_token
 
-    # JSON response for API clients.
+    # JSON response
     if request.is_json:
         return jsonify({
             "message": "Login successful.",
             "access_token": access_token,
             "user": user.to_dict(),
         }), 200
-
-    flash("Login successful.", "success")
-
-    # Redirect to the originally requested local path.
+    # Safe redirect to originally requested local path
     next_url = (
         request.form.get("next")
         or request.args.get("next")
@@ -301,12 +409,11 @@ def login():
     ):
         return redirect(next_url)
 
-    # Default redirects based on role.
+    # Default redirect
     if user.role == "admin":
         return redirect(url_for("admin.dashboard"))
 
     return redirect(url_for("events.home"))
-
 
 
 # =========================================================
@@ -318,7 +425,6 @@ def logout():
 
     user_id = session.get("user_id")
 
-    # Handle JSON requests.
     if request.is_json:
         if not user_id:
             return jsonify({
@@ -331,13 +437,15 @@ def logout():
             "message": "You have been logged out successfully."
         }), 200
 
-    # Handle HTML requests.
     if not user_id:
         flash("You are already logged out.", "info")
         return redirect(url_for("auth.login"))
 
     session.clear()
 
-    flash("You have been logged out successfully.", "success")
+    flash(
+        "You have been logged out successfully.",
+        "success",
+    )
 
     return redirect(url_for("auth.login"))

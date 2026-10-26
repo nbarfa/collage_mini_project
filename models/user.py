@@ -8,6 +8,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
+    is_email_verified = db.Column(db.Boolean, nullable=False, default=False)
     password_hash = db.Column(db.String(255), nullable=False)
 
     # 'admin' | 'student' | 'volunteer'
@@ -29,6 +30,7 @@ class User(db.Model):
             "id": self.id,
             "name": self.name,
             "email": self.email,
+            "is_email_verified": self.is_email_verified,
             "role": self.role,
             "branch": self.branch,
             "year": self.year,

@@ -198,6 +198,20 @@
 
         <!-- Main dashboard -->
         <main class="am">
+            <!-- Flash messages -->
+            <div class="flash-container">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                <div class="flash-message flash-{{ category }}" role="alert">
+                    <span>{{ message }}</span>
+                    <button type="button" class="flash-close" aria-label="Close notification"
+                        onclick="this.parentElement.remove()">
+                        &times;
+                    </button>
+                </div>
+                {% endfor %}
+                {% endwith %}
+            </div>
 
             <!-- Header -->
             <div class="ah">
@@ -606,6 +620,66 @@
                 }
             });
         })();
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const createButton = document.getElementById("create-event-btn");
+            const modal = document.getElementById("create-event-modal");
+            const closeButton = document.getElementById("close-create-event");
+            const cancelButton = document.getElementById("cancel-create-event");
+            const form = modal ? modal.querySelector("form") : null;
+
+            if (!createButton || !modal) {
+                console.error("Create Event button or modal was not found.");
+                return;
+            }
+
+            function openModal() {
+                modal.hidden = false;
+                document.body.style.overflow = "hidden";
+
+                const titleInput = document.getElementById("new-event-title");
+                if (titleInput) {
+                    titleInput.focus();
+                }
+            }
+
+            function closeModal() {
+                modal.hidden = true;
+                document.body.style.overflow = "";
+            }
+
+            createButton.addEventListener("click", openModal);
+
+            if (closeButton) {
+                closeButton.addEventListener("click", closeModal);
+            }
+
+            if (cancelButton) {
+                cancelButton.addEventListener("click", closeModal);
+            }
+
+            modal.addEventListener("click", function (event) {
+                if (event.target === modal) {
+                    closeModal();
+                }
+            });
+
+            document.addEventListener("keydown", function (event) {
+                if (event.key === "Escape" && !modal.hidden) {
+                    closeModal();
+                }
+            });
+
+            if (form) {
+                form.addEventListener("submit", function (event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        form.reportValidity();
+                    }
+                });
+            }
+        });
     </script>
 
 

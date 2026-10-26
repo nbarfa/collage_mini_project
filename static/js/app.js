@@ -107,7 +107,7 @@ function showStep(n) {
 }
 
 /* ---------- admin helpers ---------- */
-/* ---------- admin helpers ---------- */
+
 function countUp(el) {
     if (!el) return;
 
@@ -1770,3 +1770,20 @@ if (document.body.dataset.page === "profile") {
     setEditing(false);
   }
 }
+
+document.addEventListener("DOMContentLoaded", function () {
+    const flashMessages = document.querySelectorAll(
+        ".flash-message, .flash-msg"
+    );
+
+    flashMessages.forEach(function (message) {
+        setTimeout(function () {
+            message.style.transition = "opacity 0.5s ease";
+            message.style.opacity = "0";
+
+            setTimeout(function () {
+                message.remove();
+            }, 500);
+        }, 5000);
+    });
+});

@@ -247,6 +247,24 @@
 
 <!-- Correct JavaScript path: static/js/app.js -->
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const messages = document.querySelectorAll(
+        "#event-flash-container .flash-message"
+    );
+
+    messages.forEach(function (message) {
+        setTimeout(function () {
+            message.style.transition = "opacity 0.5s ease";
+            message.style.opacity = "0";
+
+            setTimeout(function () {
+                message.remove();
+            }, 500);
+        }, 5000);
+    });
+});
+</script>
 
 </body>
 </html>

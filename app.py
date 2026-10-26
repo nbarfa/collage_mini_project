@@ -1,7 +1,9 @@
 from types import SimpleNamespace
 
+from flask_migrate import Migrate
 from flask import Flask, session, request, redirect, url_for
 from flask_cors import CORS
+from flask_mail import Mail
 
 from config import Config
 from database.db import db, jwt, bcrypt
@@ -16,18 +18,18 @@ from models.checkin import Checkin
 def create_app():
     app = Flask(__name__)
 
+    # Application configuration
     app.config.from_object(Config)
 
+    # Initialize extensions
+    mail = Mail(app)
     CORS(app)
-
     db.init_app(app)
+    Migrate(app, db)
     jwt.init_app(app)
     bcrypt.init_app(app)
 
-    # =====================================================
-    # REGISTER BLUEPRINTS
-    # =====================================================
-
+    # Register blueprints
     from routes.auth import auth_bp
     from routes.events import events_bp
     from routes.admin import admin_bp
@@ -36,15 +38,13 @@ def create_app():
     app.register_blueprint(events_bp)
     app.register_blueprint(admin_bp)
 
-    # =====================================================
-    # GLOBAL LOGIN PROTECTION
-    # =====================================================
-
+    # Global login protection
     @app.before_request
     def require_login():
         public_endpoints = {
             "auth.login",
             "auth.signup",
+            "auth.verify_email",
             "static",
             "health",
         }
@@ -76,10 +76,7 @@ def create_app():
 
         return None
 
-    # =====================================================
-    # MAKE current_user AVAILABLE IN ALL HTML TEMPLATES
-    # =====================================================
-
+    # Make current_user available in all HTML templates
     @app.context_processor
     def inject_current_user():
         user_id = session.get("user_id")
@@ -105,10 +102,7 @@ def create_app():
 
         return {"current_user": current_user}
 
-    # =====================================================
-    # HEALTH CHECK
-    # =====================================================
-
+    # Health check
     @app.route("/health")
     def health():
         return {"status": "ok"}
@@ -116,21 +110,21 @@ def create_app():
     return app
 
 
+# Create application
 app = create_app()
 
 
+# Run application
 if __name__ == "__main__":
     with app.app_context():
 
-        # =================================================
-        # DATABASE DEBUG INFORMATION
-        # =================================================
-
+        # Database debug information
         print("\n========================================")
         print("DATABASE:", db.engine.url.database)
         print("========================================")
 
         print("\nREGISTERED SQLALCHEMY TABLES:")
+
         for table_name in sorted(db.metadata.tables.keys()):
             print(" -", table_name)
 
